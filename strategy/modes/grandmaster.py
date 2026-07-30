@@ -175,7 +175,7 @@ def get_opposite_lane(hot_lane):
     return random.choice(["left", "right"])
 
 
-def decide(game_state, threat, elixir, memory, placement):
+def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_state=None):
     """
     Grandmaster-level decision engine.
     Evaluates every situation and picks the optimal play.
@@ -188,17 +188,36 @@ def decide(game_state, threat, elixir, memory, placement):
     if not hand:
         return ActionCommand(Action.WAIT), "No cards in hand"
     
+    phase = get_game_phase(game_time)
+    
+    # Phase adjustments
+    if phase == "double_elixir":
+        min_action_delay = 1.0  # Faster plays in double elixir
+    elif phase == "overtime":
+        min_action_delay = 0.5  # All-in mode
+    else:
+        min_action_delay = 1.5
+
     # Throttle actions — don't spam faster than the game can handle
-    if current_time - _last_action_time < _MIN_ACTION_DELAY:
+    if current_time - _last_action_time < min_action_delay:
         return ActionCommand(Action.WAIT), "Action cooldown"
     
     current_elixir = elixir.player_elixir
     report = threat.assess(game_state)
-    game_time = current_time  # Will be overridden by proper timer in Phase 6
-    phase = "single_elixir"  # Default until Phase 6 adds proper timer
     
     elixir_advantage = elixir.get_elixir_advantage()
     
+    # ═══════════════════════════════════════════════════════
+    # PHASE 5: ENEMY CYCLE PREDICTION (PREDICTIVE DEFENSE)
+    # Check if the enemy has a win condition ready in their hand.
+    # If so, reserve our best counter so we don't waste it on lesser threats.
+    # ═══════════════════════════════════════════════════════
+    reserved_card = None
+    if memory.has_win_condition_in_cycle():
+        enemy_win_con = next((c for c in memory.deck if c in WIN_CONDITIONS and memory.is_in_cycle(c)), None)
+        if enemy_win_con:
+            reserved_card = best_counter(enemy_win_con, hand)
+            
     # ═══════════════════════════════════════════════════════
     # PRIORITY 1: EMERGENCY DEFENSE
     # Enemy troops in danger zone — MUST counter immediately
@@ -237,26 +256,50 @@ def decide(game_state, threat, elixir, memory, placement):
     # ═══════════════════════════════════════════════════════
     # PRIORITY 2: SPELL FINISH
     # If enemy tower is low enough to spell, just fire it
-    # TODO: Requires tower HP tracking (Phase 6). 
-    # For now, check if we have a spell and tower HP info.
     # ═══════════════════════════════════════════════════════
-    # (This block is a placeholder until Phase 6 adds tower HP reading)
-    # Spell finish logic will go here.
+    if ui_state and (ui_state.enemy_left_tower_hp or ui_state.enemy_right_tower_hp):
+        for c in hand:
+            if c in SPELLS and c != "tornado":
+                spell_card = _card_db.get(c)
+                # Ensure the spell has damage and we can afford it
+                if spell_card and hasattr(spell_card.combat, 'damage') and spell_card.combat.damage:
+                    afford, cost = can_afford(c, current_elixir)
+                    if afford:
+                        # Crown tower damage is usually ~30% of troop damage, but we use what we have in DB
+                        # For now, let's assume the DB has crown_tower_damage or we calculate it (30%)
+                        ct_damage = getattr(spell_card.combat, 'crown_tower_damage', spell_card.combat.damage * 0.3)
+                        
+                        # Check left tower
+                        if ui_state.enemy_left_tower_hp and ui_state.enemy_left_tower_hp <= ct_damage:
+                            _last_action_time = current_time
+                            return ActionCommand(
+                                Action.PLAY_CARD, card_to_play=c,
+                                target_x=180, target_y=250
+                            ), f"💥 SPELL FINISH: {c} on Left Tower (HP: {ui_state.enemy_left_tower_hp} <= {ct_damage:.0f})"
+                            
+                        # Check right tower
+                        if ui_state.enemy_right_tower_hp and ui_state.enemy_right_tower_hp <= ct_damage:
+                            _last_action_time = current_time
+                            return ActionCommand(
+                                Action.PLAY_CARD, card_to_play=c,
+                                target_x=540, target_y=250
+                            ), f"💥 SPELL FINISH: {c} on Right Tower (HP: {ui_state.enemy_right_tower_hp} <= {ct_damage:.0f})"
     
     # ═══════════════════════════════════════════════════════
     # PRIORITY 3: PUNISH PLAY
     # Enemy just dropped an expensive card — rush opposite lane!
     # ═══════════════════════════════════════════════════════
+    # ═══════════════════════════════════════════════════════
     if detect_punish_window(memory, elixir):
-        # Find a fast win condition or bridge spam card
+        # Find a fast win condition or bridge spam card (but don't use our reserved counter)
         punish_card = None
         for c in hand:
-            if c in WIN_CONDITIONS and c not in SPELLS:
+            if c in WIN_CONDITIONS and c not in SPELLS and c != reserved_card:
                 punish_card = c
                 break
         if not punish_card:
             for c in hand:
-                if c in MINI_TANKS:
+                if c in MINI_TANKS and c != reserved_card:
                     punish_card = c
                     break
         
@@ -299,6 +342,26 @@ def decide(game_state, threat, elixir, memory, placement):
                         Action.PLAY_CARD, card_to_play=card,
                         target_x=int(cx), target_y=int(cy)
                     ), f"🎯 SPELL VALUE: {card} on {targets} troops ({value:.0f} elixir value)"
+                    
+    # ═══════════════════════════════════════════════════════
+    # PRIORITY 4.5: CYCLE-AWARE AGGRESSION
+    # If enemy just played their best counter to our swarm/win condition,
+    # punish them with the card they can no longer counter.
+    # ═══════════════════════════════════════════════════════
+    if memory.play_history and report.enemy_count == 0:
+        last_played = memory.play_history[-1]
+        # Example: if they just played Valkyrie, they are vulnerable to swarms
+        if last_played in {"valkyrie", "wizard", "executioner", "bomb_tower"}:
+            for c in hand:
+                if c in SWARMS and c != reserved_card:
+                    afford, _ = can_afford(c, current_elixir)
+                    if afford:
+                        _last_action_time = current_time
+                        tx, ty = placement.calculate_drop(c, report, game_state)
+                        return ActionCommand(
+                            Action.PLAY_CARD, card_to_play=c,
+                            target_x=tx, target_y=ty
+                        ), f"⚡ CYCLE AGGRESSION: {c} at bridge (enemy just played {last_played})"
     
     # ═══════════════════════════════════════════════════════
     # PRIORITY 5: COMBO PUSH
@@ -307,7 +370,7 @@ def decide(game_state, threat, elixir, memory, placement):
     # ═══════════════════════════════════════════════════════
     if report.enemy_count == 0 or not report.pressure:
         tank, support = find_combo_in_hand(hand)
-        if tank and support:
+        if tank and support and tank != reserved_card and support != reserved_card:
             tank_cost = get_card_cost(tank)
             support_cost = get_card_cost(support)
             total_cost = tank_cost + support_cost
@@ -353,7 +416,7 @@ def decide(game_state, threat, elixir, memory, placement):
     if current_elixir >= 9.0:
         # Prefer tanks in the back (start a push)
         for c in hand:
-            if c in TANKS:
+            if c in TANKS and c != reserved_card:
                 afford, _ = can_afford(c, current_elixir)
                 if afford:
                     push_x = random.choice([180, 540])
@@ -364,14 +427,22 @@ def decide(game_state, threat, elixir, memory, placement):
                     ), f"💧 Overflow: {c} in the back (avoiding leak)"
         
         # No tank? Play cheapest card
-        cheapest, cheap_cost = find_cheapest(hand)
-        if cheapest and current_elixir >= cheap_cost:
-            tx, ty = placement.calculate_drop(cheapest, report, game_state)
+        cheapest_available = None
+        cheap_cost = 99
+        for c in hand:
+            if c != reserved_card:
+                cost = get_card_cost(c)
+                if cost < cheap_cost:
+                    cheap_cost = cost
+                    cheapest_available = c
+                    
+        if cheapest_available and current_elixir >= cheap_cost:
+            tx, ty = placement.calculate_drop(cheapest_available, report, game_state)
             _last_action_time = current_time
             return ActionCommand(
-                Action.PLAY_CARD, card_to_play=cheapest,
+                Action.PLAY_CARD, card_to_play=cheapest_available,
                 target_x=tx, target_y=ty
-            ), f"💧 Overflow: {cheapest} to avoid leak"
+            ), f"💧 Overflow: {cheapest_available} to avoid leak"
     
     # ═══════════════════════════════════════════════════════
     # PRIORITY 8: PUSH (when safe)
@@ -379,7 +450,7 @@ def decide(game_state, threat, elixir, memory, placement):
     # ═══════════════════════════════════════════════════════
     if report.enemy_count == 0 and current_elixir >= 7:
         for c in hand:
-            if c in WIN_CONDITIONS and c not in SPELLS:
+            if c in WIN_CONDITIONS and c not in SPELLS and c != reserved_card:
                 afford, cost = can_afford(c, current_elixir)
                 if afford:
                     tx, ty = placement.calculate_drop(c, report, game_state)

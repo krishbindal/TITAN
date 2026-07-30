@@ -1,6 +1,7 @@
 import random
 import pickle
 import os
+from learning.vector_state import StateVectorizer
 
 class QLearningAgent:
     def __init__(self, actions, alpha=0.1, gamma=0.9, epsilon=0.1, model_path="models/q_table.pkl"):
@@ -10,11 +11,22 @@ class QLearningAgent:
         self.gamma = gamma
         self.epsilon = epsilon
         self.model_path = model_path
+        
+        # Phase 7: Deep Learning Vectorizer (Future-proofing)
+        self.vectorizer = StateVectorizer()
+        
         self.load()
+
+    def get_vectorized_state(self, game_state, ui_state, threat_report, elixir_tracker, memory, game_time):
+        """
+        Returns a dense numpy tensor suitable for DQN/PPO.
+        This bridges the gap between the CV pipeline and Deep RL.
+        """
+        return self.vectorizer.vectorize(game_state, ui_state, threat_report, elixir_tracker, memory, game_time)
 
     def _get_state_key(self, state, threat_report, elixir_tracker, memory=None):
         """
-        Simplify the vast state space into a discrete tuple for the Q-Table.
+        Legacy: Simplify the vast state space into a discrete tuple for the Q-Table.
         """
         # Discretize Player Elixir
         elixir = elixir_tracker.player_elixir

@@ -12,6 +12,10 @@ class UIState:
 
         self.selected_card = None
 
+        self.enemy_left_tower_hp = None
+
+        self.enemy_right_tower_hp = None
+
     def __str__(self):
 
         return f"""

@@ -31,7 +31,7 @@ class Pipeline:
         self.action_detector = ActionDetector()
 
         self.frame_count = 0
-        self.start_time = time.time()
+        self.match_start_time = None
 
     def process_frame(self, frame):
 
@@ -43,6 +43,7 @@ class Pipeline:
             
             # Send terminal states to the RL Trainer for Win/Loss rewards
             if screen_state in [ScreenState.VICTORY, ScreenState.DEFEAT]:
+                self.match_start_time = None
                 if self.strategy._mode.__name__.endswith("rl"):
                     self.strategy.trainer.step(
                         state=None,
@@ -53,6 +54,10 @@ class Pipeline:
                     )
                 
             return None, None, screen_state, None
+            
+        # If we are in GAMEPLAY but haven't started the timer, start it now
+        if self.match_start_time is None:
+            self.match_start_time = time.time()
 
         # Step 2: Detect objects
         detections = self.detector.detect(frame)
@@ -77,7 +82,7 @@ class Pipeline:
         game_state = self.state_builder.build(confirmed, ui_state)
 
         # Step 8: Decide next action
-        game_time = time.time() - self.start_time
+        game_time = time.time() - self.match_start_time
         action, suggestion = self.strategy.decide(game_state, ui_state, game_time)
 
         # Step 9: Train RL Agent (ONLY in RL mode)
