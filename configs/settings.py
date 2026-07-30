@@ -30,3 +30,9 @@ AUTO_LABELED_DIR = "data/auto_labeled"
 
 # === Debug ===
 SAVE_DEBUG_IMAGES = True
+ENABLE_DEBUG_OVERLAY = True
+
+# === Analytics ===
+ENABLE_ANALYTICS = True
+ANALYTICS_DIR = "logs/analytics"
+REPLAYS_DIR = "replays"

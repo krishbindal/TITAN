@@ -165,6 +165,7 @@ def decide(game_state, threat, elixir, memory, placement):
     """
     Main entry point for strategy evaluation.
     Delegates to the scoring system and picks the highest scoring action.
+    Returns: best_action, best_reason, all_scores
     """
     scores = calculate_action_scores(game_state, threat, elixir, memory, placement)
     
@@ -174,4 +175,4 @@ def decide(game_state, threat, elixir, memory, placement):
     # Pick the highest scoring action
     best_score, best_action, best_reason = scores[0]
     
-    return best_action, best_reason
+    return best_action, best_reason, scores

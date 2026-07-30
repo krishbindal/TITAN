@@ -20,6 +20,7 @@ from dashboard.app import start_dashboard
 from core.ui_navigator import UINavigator
 from vision.collection_reader import CollectionReader
 from strategy.deck_builder import DeckBuilder
+from core.analytics import get_engine, MatchLogger, ReplayLogger
 
 # Global state for dashboard
 _latest_frame = None
@@ -81,6 +82,9 @@ def main():
     was_in_gameplay = False
     needs_management = True
     last_match_won = False
+    
+    match_logger = None
+    replay_logger = None
 
     while True:
         try:
@@ -132,8 +136,6 @@ def main():
                 else []
             )
 
-            _latest_frame = visualizer.draw(frame, detections, action)
-
             # Update telemetry
             elapsed = time.time() - start_time
             fps = 1.0 / elapsed if elapsed > 0 else 0
@@ -149,6 +151,15 @@ def main():
                 # Access strategy through the inner pipeline object in AsyncEngine
                 threat_report = pipeline.pipeline.strategy.get_threat_report(game_state)
                 elixir_adv = pipeline.pipeline.strategy.elixir.get_elixir_advantage()
+                
+                # Fetch memory stats for overlay
+                memory = pipeline.pipeline.strategy.memory
+                predicted_deck = list(memory.deck)
+                enemy_elixir = memory.enemy_elixir
+                
+                # Get the last scores from the logger if available, otherwise empty
+                # We can just put some basic stats in telemetry to pass to visualizer
+                
                 _latest_telemetry = {
                     "status": "active",
                     "fps": fps,
@@ -156,6 +167,8 @@ def main():
                     "action": action_name,
                     "suggestion": suggestion or "",
                     "elixir_advantage": elixir_adv,
+                    "enemy_elixir": enemy_elixir,
+                    "predicted_deck": predicted_deck,
                     "hot_lane": threat_report.hot_lane,
                     "pressure": threat_report.pressure,
                 }
@@ -165,17 +178,35 @@ def main():
                 _latest_telemetry["action"] = screen_state.name
                 _latest_telemetry["suggestion"] = f"Screen: {screen_state.name}"
                 _latest_telemetry["elixir_advantage"] = 0.0
+                _latest_telemetry["enemy_elixir"] = 0.0
+                _latest_telemetry["predicted_deck"] = []
                 _latest_telemetry["hot_lane"] = "balanced"
                 _latest_telemetry["pressure"] = False
 
+            _latest_frame = visualizer.draw(frame, detections, action, telemetry=_latest_telemetry)
+            
+            if replay_logger:
+                replay_logger.log_frame(_latest_frame)
+
             # 3. Handle Game States (Management vs Gameplay)
             if screen_state.name == "GAMEPLAY":
+                if not was_in_gameplay:
+                    session_id = pipeline.pipeline.strategy.session_id if hasattr(pipeline.pipeline, 'strategy') else int(time.time())
+                    match_logger = MatchLogger(get_engine(), session_id)
+                    match_logger.start_match()
+                    replay_logger = ReplayLogger(session_id)
                 was_in_gameplay = True
             elif screen_state.name == "VICTORY":
                 if was_in_gameplay:
                     print("\n[TITAN] VICTORY DETECTED! BMing opponent...")
                     navigator.send_emote("laugh")
                     deck_builder.record_match_result(won=True)
+                    if match_logger:
+                        match_logger.end_match(won=True)
+                        match_logger = None
+                    if replay_logger:
+                        replay_logger.stop()
+                        replay_logger = None
                     # Train RL
                     if pipeline.pipeline.strategy._mode.__name__.endswith("rl"):
                         pipeline.pipeline.strategy._mode.apply_match_result(won=True)
@@ -187,6 +218,12 @@ def main():
                     print("\n[TITAN] DEFEAT DETECTED. Sending sad emote...")
                     navigator.send_emote("cry")
                     deck_builder.record_match_result(won=False)
+                    if match_logger:
+                        match_logger.end_match(won=False)
+                        match_logger = None
+                    if replay_logger:
+                        replay_logger.stop()
+                        replay_logger = None
                     # Train RL
                     if pipeline.pipeline.strategy._mode.__name__.endswith("rl"):
                         pipeline.pipeline.strategy._mode.apply_match_result(won=False)
@@ -240,6 +277,9 @@ def main():
                     )
                     adb.play_card(card_idx, action.target_x, action.target_y)
                     
+                    if match_logger:
+                        match_logger.record_action()
+                        
                     # Deduct elixir cost from tracker
                     pipeline.pipeline.strategy.elixir.deduct_card_play(action.card_to_play)
 

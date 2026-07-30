@@ -12,6 +12,8 @@ from configs.game_config import GAME_MODE
 from learning.trainer import Trainer
 
 from strategy.modes import standard, sudden_death, rl
+from core.analytics import get_engine, DecisionLogger
+import time
 
 # Mode registry — maps config strings to mode modules
 MODE_REGISTRY = {
@@ -34,6 +36,10 @@ class Strategy:
 
         # Load the active mode
         self._mode = MODE_REGISTRY.get(GAME_MODE, standard)
+        
+        # Initialize Analytics Logger
+        self.session_id = int(time.time())
+        self.logger = DecisionLogger(get_engine(), self.session_id)
 
     def decide(self, game_state, ui_state=None, game_time=0.0):
         """
@@ -43,11 +49,30 @@ class Strategy:
         self.elixir.update(game_state, ui_state, game_time)
         self.memory.update(game_state, game_time)
 
-        # Delegate to active mode (returns ActionCommand, Suggestion_String)
-        action_cmd, suggestion = self._mode.decide(
+        # Delegate to active mode
+        result = self._mode.decide(
             game_state, self.threat, self.elixir, self.memory, self.placement
         )
         
+        # Handle different return signatures (Standard mode vs others)
+        if len(result) == 3:
+            action_cmd, suggestion, all_scores = result
+        else:
+            action_cmd, suggestion = result
+            all_scores = []
+            
+        # Decision Logging
+        if hasattr(self, 'logger') and self.logger:
+            self.logger.log(
+                game_time=game_time,
+                my_elixir=self.elixir.player_elixir,
+                enemy_elixir=self.memory.enemy_elixir,
+                best_action=action_cmd,
+                best_reason=suggestion,
+                all_scores=all_scores,
+                predicted_deck=self.memory.deck
+            )
+
         return action_cmd, suggestion
 
     def set_mode(self, mode_name):
