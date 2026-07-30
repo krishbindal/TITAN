@@ -1,21 +1,29 @@
 """
-Standard Mode Strategy — AGGRESSIVE.
-Key Rule: NEVER sit at high elixir. Always play a card if elixir >= 8.
-Defend immediately, counter-push with any advantage, push at 7+.
+Standard Mode Strategy — PREDICTIVE.
+Transforms TITAN into an intelligent bot by scoring actions using Memory,
+Elixir tracking, and Counter matrices to preempt and outsmart the opponent.
 """
 
 import json
 import os
 import random
 from strategy.actions import Action, ActionCommand
-from knowledge.counter_matrix import best_counter
+from knowledge.counter_matrix import get_counters
 from configs.settings import DECK_CONFIG_PATH
 
 # Load deck config once at module level
-_deck_config = {"win_conditions": [], "tanks": []}
+_deck_config = {"win_conditions": [], "tanks": [], "spells": []}
 if os.path.exists(DECK_CONFIG_PATH):
     with open(DECK_CONFIG_PATH, "r") as f:
         _deck_config = json.load(f)
+
+# Hardcoded enemy win conditions for general evaluation
+ENEMY_WIN_CONDITIONS = {
+    "hog_rider", "giant", "golem", "balloon", "miner", 
+    "goblin_barrel", "royal_giant", "wall_breakers", "battle_ram",
+    "ram_rider", "goblin_drill", "skeleton_barrel", "graveyard",
+    "lava_hound", "xbow", "mortar"
+}
 
 
 def can_afford(card_name, current_elixir, card_db):
@@ -28,129 +36,142 @@ def can_afford(card_name, current_elixir, card_db):
     return current_elixir >= cost, cost
 
 
-def pick_best_card(hand, report, mode, card_db):
+def calculate_action_scores(game_state, threat, elixir, memory, placement):
     """
-    Pick the best card for the situation.
-    mode: 'defend', 'push', 'overflow'
+    Evaluates and scores all possible actions based on current game state and memory.
+    Returns a list of tuples: (score, ActionCommand, reason)
     """
+    scores = []
+    hand = game_state.hand
+    
+    if not hand:
+        return [(0.0, ActionCommand(Action.WAIT), "No cards detected in hand.")]
+
+    current_elixir = elixir.player_elixir
+    report = threat.assess(game_state)
+    
+    # Extract Memory Analytics
+    elixir_adv = memory.get_elixir_advantage(current_elixir)
+    enemy_win_con_ready = memory.has_win_condition_in_cycle()
+    
     win_cons = set(_deck_config.get("win_conditions", []))
     tanks = set(_deck_config.get("tanks", []))
 
-    if mode == "defend" and report.top_threat:
-        enemy_key = report.top_threat.name.replace("enemy_", "")
-        counter = best_counter(enemy_key, hand)
-        if counter:
-            return counter
+    # =========================================================
+    # 1. SCORE 'WAIT' ACTION
+    # =========================================================
+    wait_score = 10.0  # Base wait score
+    
+    # Predictive Defense: Enemy has high elixir and a win-con ready
+    if enemy_win_con_ready and memory.enemy_elixir >= 6.0:
+        wait_score += 50.0  
+        
+    # Prevent leaking elixir
+    if current_elixir >= 9.5:
+        wait_score -= 200.0 
+    # Force wait if broke
+    elif current_elixir < 3.0:
+        wait_score += 40.0
+        
+    scores.append((wait_score, ActionCommand(Action.WAIT), f"Waiting (Adv: {elixir_adv:.1f})"))
 
-    if mode == "push":
-        # Prefer win conditions first, then tanks
-        for c in hand:
-            if c in win_cons and not c.startswith("unknown_"):
-                return c
-        for c in hand:
-            if c in tanks and not c.startswith("unknown_"):
-                return c
+    # =========================================================
+    # 2. SCORE CARD ACTIONS
+    # =========================================================
+    for card in hand:
+        if card.startswith("unknown_"):
+            continue
+            
+        afford, cost = can_afford(card, current_elixir, elixir.card_db)
+        if not afford:
+            continue
 
-    if mode == "overflow":
-        # At max elixir, prefer tanks (build push from back) then anything
-        for c in hand:
-            if c in tanks and not c.startswith("unknown_"):
-                return c
-        for c in hand:
-            if c in win_cons and not c.startswith("unknown_"):
-                return c
+        tx, ty = placement.calculate_drop(card, report, game_state)
+        
+        card_score = 0.0
+        reason = ""
+        saved_for_defense = False
 
-    # Fallback: pick a known card, or random unknown
-    known = [c for c in hand if not c.startswith("unknown_")]
-    if known:
-        return random.choice(known)
+        # --- A) Counter Preservation Logic ---
+        # Don't waste a critical counter if the enemy is holding their win condition
+        for e_card in memory.deck:
+            if e_card in ENEMY_WIN_CONDITIONS and memory.is_in_cycle(e_card):
+                if card in get_counters(e_card):
+                    # This card is a primary counter to a ready enemy win condition!
+                    card_score -= 100.0
+                    saved_for_defense = True
+                    reason = f"Saving {card} for {e_card}"
+                    break
 
-    unknowns = [c for c in hand if c.startswith("unknown_")]
-    if unknowns:
-        return random.choice(unknowns)
+        # --- B) Defense Score ---
+        if report.pressure and report.top_threat:
+            enemy_key = report.top_threat.name.replace("enemy_", "")
+            valid_counters = get_counters(enemy_key)
+            
+            if card in valid_counters:
+                # Better counters (lower index) get higher scores
+                rank = valid_counters.index(card)
+                card_score += 100.0 + (10 - rank)
+                reason = f"Defending {enemy_key} with {card}"
+                saved_for_defense = False  # Override preservation if we MUST defend now
+            else:
+                card_score += 20.0  # Desperate defense
+                if not reason:
+                    reason = f"Desperate defend with {card}"
+                    
+        # --- C) Offense / Push Score ---
+        elif not saved_for_defense:
+            if card in win_cons:
+                # Smart Win Condition Usage: Check if direct counter is available
+                countered = False
+                for e_counter in get_counters(card):
+                    if e_counter in memory.deck and memory.is_in_cycle(e_counter):
+                        card_score -= 80.0
+                        reason = f"{card} countered by {e_counter}"
+                        countered = True
+                        break
+                
+                if not countered:
+                    # Elixir Advantage scaling
+                    card_score += 60.0 + (elixir_adv * 15.0)
+                    reason = f"Pushing with {card} (Adv: {elixir_adv:.1f})"
+                    
+            elif card in tanks:
+                card_score += 40.0 + (elixir_adv * 10.0)
+                reason = f"Building push with {card} (Adv: {elixir_adv:.1f})"
+                
+            else:
+                # Cycling / Support cards
+                if current_elixir >= 7.0:
+                    card_score += 20.0 + (elixir_adv * 5.0)
+                    reason = f"Cycling {card}"
 
-    return hand[0] if hand else None
+        # --- D) Overflow Fallback ---
+        # If we are leaking elixir and this is our best valid card, force it
+        if current_elixir >= 9.5 and card_score <= wait_score:
+            card_score = wait_score + 10.0 + random.random()
+            reason = f"Elixir Overflow: Dumping {card}"
+
+        scores.append((
+            card_score, 
+            ActionCommand(Action.PLAY_CARD, card_to_play=card, target_x=tx, target_y=ty), 
+            f"{reason} [Score: {card_score:.1f}]"
+        ))
+
+    return scores
 
 
 def decide(game_state, threat, elixir, memory, placement):
     """
-    Aggressive standard mode decision logic.
-    NEVER leaks elixir. Always plays a card at 8+.
+    Main entry point for strategy evaluation.
+    Delegates to the scoring system and picks the highest scoring action.
     """
-    hand = game_state.hand
-    if not hand:
-        return ActionCommand(Action.WAIT), "No cards detected in hand."
-
-    current_elixir = elixir.player_elixir
-    report = threat.assess(game_state)
-
-    # =========================================================
-    # RULE 1: NEVER LEAK ELIXIR — At 8+, play SOMETHING now.
-    # Sitting at 10 elixir = wasting 1 elixir every 2.8 seconds.
-    # =========================================================
-    if current_elixir >= 8.0:
-        # If there are enemies, try to counter. Otherwise push.
-        if report.enemy_count > 0 and report.top_threat:
-            card = pick_best_card(hand, report, "defend", elixir.card_db)
-        else:
-            card = pick_best_card(hand, report, "overflow", elixir.card_db)
-
-        if card:
-            afford, cost = can_afford(card, current_elixir, elixir.card_db)
-            if afford:
-                tx, ty = placement.calculate_drop(card, report, game_state)
-                return ActionCommand(
-                    Action.PLAY_CARD, card_to_play=card, target_x=tx, target_y=ty
-                ), f"Elixir overflow ({current_elixir:.0f}/10)! Playing {card.replace('_', ' ').title()}"
-
-    # =========================================================
-    # RULE 2: DEFEND — Enemy in danger zone, counter immediately.
-    # =========================================================
-    if report.pressure and report.top_threat:
-        enemy_key = report.top_threat.name.replace("enemy_", "")
-        counter = best_counter(enemy_key, hand)
-
-        if not counter:
-            counter = pick_best_card(hand, report, "defend", elixir.card_db)
-
-        if counter:
-            afford, cost = can_afford(counter, current_elixir, elixir.card_db)
-            if afford:
-                tx, ty = placement.calculate_drop(counter, report, game_state)
-                return ActionCommand(
-                    Action.PLAY_CARD, card_to_play=counter, target_x=tx, target_y=ty
-                ), f"DEFENDING! {counter.replace('_', ' ').title()} vs {enemy_key.replace('_', ' ').title()}"
-            else:
-                return ActionCommand(Action.WAIT), f"Under attack! Need {cost:.0f} elixir, have {current_elixir:.0f}"
-
-    # =========================================================
-    # RULE 3: PRE-DEFEND — Enemies exist but not yet in danger zone.
-    # If we have 5+ elixir, play a counter preemptively.
-    # =========================================================
-    if report.enemy_count > 0 and current_elixir >= 5:
-        card = pick_best_card(hand, report, "defend", elixir.card_db)
-        if card:
-            afford, cost = can_afford(card, current_elixir, elixir.card_db)
-            if afford:
-                tx, ty = placement.calculate_drop(card, report, game_state)
-                return ActionCommand(
-                    Action.PLAY_CARD, card_to_play=card, target_x=tx, target_y=ty
-                ), f"Pre-defending with {card.replace('_', ' ').title()} ({current_elixir:.0f} elixir)"
-
-    # =========================================================
-    # RULE 4: PUSH — No enemies, 7+ elixir, start a push.
-    # =========================================================
-    if report.enemy_count == 0 and current_elixir >= 7:
-        card = pick_best_card(hand, report, "push", elixir.card_db)
-        if card:
-            afford, cost = can_afford(card, current_elixir, elixir.card_db)
-            if afford:
-                tx, ty = placement.calculate_drop(card, report, game_state)
-                return ActionCommand(
-                    Action.PLAY_CARD, card_to_play=card, target_x=tx, target_y=ty
-                ), f"Pushing with {card.replace('_', ' ').title()} ({current_elixir:.0f} elixir)"
-
-    # =========================================================
-    # DEFAULT: Save elixir, build up for a play.
-    # =========================================================
-    return ActionCommand(Action.WAIT), f"Building elixir ({current_elixir:.1f}/10)"
+    scores = calculate_action_scores(game_state, threat, elixir, memory, placement)
+    
+    # Sort actions by score descending
+    scores.sort(key=lambda x: x[0], reverse=True)
+    
+    # Pick the highest scoring action
+    best_score, best_action, best_reason = scores[0]
+    
+    return best_action, best_reason
