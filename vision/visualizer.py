@@ -4,7 +4,7 @@ from configs.settings import ENABLE_DEBUG_OVERLAY
 
 class Visualizer:
 
-    def draw(self, frame, detections, action=None):
+    def draw(self, frame, detections, action=None, telemetry=None):
         image = frame.copy()
 
         for detection in detections:
