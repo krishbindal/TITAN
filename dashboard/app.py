@@ -10,7 +10,39 @@ _get_frame_cb = None
 _get_telemetry_cb = None
 
 
+import os
+from functools import wraps
+from flask import request, Response
+
+# Simple Basic Auth
+DASHBOARD_USER = os.environ.get("TITAN_DASHBOARD_USER")
+DASHBOARD_PASS = os.environ.get("TITAN_DASHBOARD_PASS")
+
+def check_auth(username, password):
+    return username == DASHBOARD_USER and password == DASHBOARD_PASS
+
+def authenticate():
+    return Response(
+        'Could not verify your access level for that URL.\n'
+        'You have to login with proper credentials', 401,
+        {'WWW-Authenticate': 'Basic realm="TITAN Dashboard"'}
+    )
+
+def requires_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # Skip auth if credentials are not configured
+        if not DASHBOARD_USER or not DASHBOARD_PASS:
+            return f(*args, **kwargs)
+            
+        auth = request.authorization
+        if not auth or not check_auth(auth.username, auth.password):
+            return authenticate()
+        return f(*args, **kwargs)
+    return decorated
+
 @app.route("/")
+@requires_auth
 def index():
     return render_template("index.html")
 
@@ -38,11 +70,13 @@ def gen_frames():
 
 
 @app.route("/video_feed")
+@requires_auth
 def video_feed():
     return Response(gen_frames(), mimetype="multipart/x-mixed-replace; boundary=frame")
 
 
 @app.route("/api/telemetry")
+@requires_auth
 def telemetry():
     if _get_telemetry_cb:
         data = _get_telemetry_cb()
@@ -55,11 +89,18 @@ def run_server():
     import logging
 
     logging.getLogger("waitress.queue").setLevel(logging.ERROR)
+    
+    host = os.environ.get("TITAN_DASHBOARD_HOST", "127.0.0.1")
+    port = int(os.environ.get("TITAN_DASHBOARD_PORT", 5000))
 
-    print("[Dashboard] Starting web dashboard at http://127.0.0.1:5000 (Waitress WSGI)")
+    if host == "0.0.0.0" and (not DASHBOARD_USER or not DASHBOARD_PASS):
+        print("[WARNING] Dashboard is exposed to 0.0.0.0 without authentication!")
+        print("          Set TITAN_DASHBOARD_USER and TITAN_DASHBOARD_PASS to secure it.")
+
+    print(f"[Dashboard] Starting web dashboard at http://{host}:{port} (Waitress WSGI)")
     from waitress import serve
 
-    serve(app, host="127.0.0.1", port=5000, threads=4)
+    serve(app, host=host, port=port, threads=4)
 
 
 def start_dashboard(frame_callback, telemetry_callback):
