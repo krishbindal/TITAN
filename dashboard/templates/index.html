@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TITAN S-CLASS</title>
+    <!-- Modern Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-base: #050505;
+            --bg-panel: rgba(20, 20, 22, 0.65);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(102, 252, 241, 0.3);
+            
+            --text-main: #f0f0f0;
+            --text-muted: #888899;
+            
+            --accent-cyan: #00f0ff;
+            --accent-magenta: #ff0055;
+            --accent-green: #00ff66;
+            
+            --blur: blur(24px);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            /* Ambient background glow */
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 240, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(255, 0, 85, 0.08) 0%, transparent 50%);
+            background-attachment: fixed;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 1.5rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            background: rgba(5, 5, 5, 0.8);
+            backdrop-filter: var(--blur);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 900;
+            font-size: 2rem;
+            letter-spacing: -1px;
+            background: linear-gradient(90deg, #fff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-subtitle {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: var(--accent-cyan);
+            font-weight: 700;
+        }
+        
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 255, 102, 0.1);
+            border: 1px solid rgba(0, 255, 102, 0.3);
+            color: var(--accent-green);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr 380px;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            flex-grow: 1;
+            max-width: 1800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: var(--bg-panel);
+            backdrop-filter: var(--blur);
+            -webkit-backdrop-filter: var(--blur);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+
+        .panel-header {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-header::before {
+            content: '';
+            display: block;
+            width: 4px;
+            height: 16px;
+            background: var(--accent-cyan);
+            border-radius: 2px;
+        }
+
+        /* Stats Cards */
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .stat-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--border-highlight);
+            transform: translateY(-2px);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .value-highlight { color: var(--accent-cyan); }
+        .value-danger { color: var(--accent-magenta); }
+        .value-success { color: var(--accent-green); }
+
+        /* Video Feed */
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.1);
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-wrapper img {
+            max-width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-cyan);
+        }
+
+        /* AI Suggestion Box */
+        .suggestion-box {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(0, 0, 0, 0));
+            border: 1px solid var(--accent-cyan);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: inset 0 0 20px rgba(0, 240, 255, 0.05);
+        }
+
+        .suggestion-text {
+            font-size: 1.1rem;
+            line-height: 1.5;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        /* Terminal Log */
+        .terminal {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            height: 100%;
+            min-height: 250px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .log-entry {
+            color: var(--text-muted);
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            padding-bottom: 4px;
+        }
+
+        .log-entry .time { color: var(--accent-cyan); opacity: 0.7; margin-right: 8px; }
+        .log-entry .msg { color: #fff; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
+
+        /* Responsive */
+        @media (max-width: 1400px) {
+            .dashboard-grid { grid-template-columns: 280px 1fr 320px; }
+        }
+        @media (max-width: 1100px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .video-wrapper img { max-height: 60vh; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>
+            <div class="brand-title">TITAN</div>
+            <div class="brand-subtitle">S-Class Autonomous Agent</div>
+        </div>
+        <div class="status-badge" id="conn-status">
+            <div class="status-dot"></div>
+            SYSTEM ONLINE
+        </div>
+    </header>
+
+    <div class="dashboard-grid">
+        
+        <!-- LEFT COLUMN: System Metrics -->
+        <div class="glass-panel panel-animate" style="--delay: 0.1s">
+            <div class="panel-header">System Metrics</div>
+            
+            <div class="stat-card">
+                <div class="stat-label">Engine FPS</div>
+                <div class="stat-value" id="val-fps">0.0</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">Active Strategy Mode</div>
+                <div class="stat-value value-highlight" id="val-mode">STANDARD</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Current Action</div>
+                <div class="stat-value" id="val-action" style="font-size: 1.4rem;">WAIT</div>
+            </div>
+
+            <div class="panel-header" style="margin-top: 1rem;">Action Log</div>
+            <div class="terminal" id="action-log">
+                <!-- Logs injected here -->
+            </div>
+        </div>
+
+        <!-- CENTER COLUMN: Vision Feed -->
+        <div class="glass-panel panel-animate" style="padding: 0; overflow: hidden; --delay: 0.2s">
+            <div class="video-wrapper">
+                <div class="video-overlay">LIVE NEURAL FEED</div>
+                <img src="/video_feed" alt="TITAN Live View">
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Battle Intelligence -->
+        <div class="glass-panel panel-animate" style="--delay: 0.3s">
+            <div class="panel-header" style="--accent-cyan: #ff0055;">Battle Intelligence</div>
+            
+            <div class="suggestion-box">
+                <div class="stat-label" style="color: var(--accent-cyan); margin-bottom: 8px;">AI TACTICAL REASONING</div>
+                <div class="suggestion-text" id="val-suggestion">Awaiting game state...</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Elixir Advantage</div>
+                <div class="stat-value" id="val-elixir">0.0</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Hot Lane (Threat)</div>
+                <div class="stat-value" id="val-hotlane">NONE</div>
+            </div>
+
+            <div class="stat-card" id="card-pressure">
+                <div class="stat-label">Under Pressure</div>
+                <div class="stat-value" id="val-pressure">NO</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { animate, spring, stagger } from "https://cdn.jsdelivr.net/npm/motion@11.11.13/+esm";
+
+        // Animate panels in on load
+        animate(".panel-animate", 
+            { y: [40, 0], opacity: [0, 1] }, 
+            { 
+                delay: stagger(0.1),
+                duration: 0.8,
+                easing: spring({ stiffness: 100, damping: 15 })
+            }
+        );
+
+    </script>
+    <script>
+        // Logic
+        const logBox = document.getElementById('action-log');
+        let lastAction = "";
+        let lastSuggestion = "";
+
+        function addLog(msg) {
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            const line = document.createElement('div');
+            line.className = 'log-entry';
+            line.innerHTML = `<span class="time">[${time}]</span><span class="msg">${msg}</span>`;
+            
+            logBox.appendChild(line);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        // Helper to animate value changes smoothly
+        function updateTextWithAnimation(elementId, newValue, colorClass = null) {
+            const el = document.getElementById(elementId);
+            if (el.innerText !== newValue.toString()) {
+                el.innerText = newValue;
+                if (colorClass) {
+                    el.className = `stat-value ${colorClass}`;
+                }
+            }
+        }
+
+        async function updateTelemetry() {
+            try {
+                const response = await fetch('/api/telemetry');
+                const data = await response.json();
+
+                if (data.status !== "waiting") {
+                    
+                    updateTextWithAnimation('val-fps', data.fps.toFixed(1));
+                    updateTextWithAnimation('val-mode', data.strategy_mode.toUpperCase(), 'value-highlight');
+                    updateTextWithAnimation('val-action', data.action);
+                    
+                    // Log new actions
+                    if (data.action !== lastAction && data.action !== "WAIT") {
+                        addLog(`Action: ${data.action}`);
+                        lastAction = data.action;
+                    }
+
+                    // Update Suggestion with fade
+                    const suggestionEl = document.getElementById('val-suggestion');
+                    const newSuggestion = data.suggestion || "Analyzing battlefield...";
+                    if (newSuggestion !== lastSuggestion) {
+                        suggestionEl.innerText = newSuggestion;
+                        lastSuggestion = newSuggestion;
+                    }
+
+                    // Elixir Advantage Logic
+                    const adv = data.elixir_advantage;
+                    let advText = adv > 0 ? `+${adv.toFixed(1)}` : adv.toFixed(1);
+                    let advColor = 'stat-value'; // default white
+                    if (adv > 2.0) advColor = 'value-success';
+                    if (adv < -2.0) advColor = 'value-danger';
+                    updateTextWithAnimation('val-elixir', advText, advColor);
+
+                    // Threat Logic
+                    updateTextWithAnimation('val-hotlane', data.hot_lane.toUpperCase());
+
+                    // Pressure Logic
+                    const pressureEl = document.getElementById('val-pressure');
+                    const pressureCard = document.getElementById('card-pressure');
+                    if (data.pressure) {
+                        updateTextWithAnimation('val-pressure', "YES", 'value-danger');
+                        pressureCard.style.borderColor = 'var(--accent-magenta)';
+                        pressureCard.style.background = 'rgba(255, 0, 85, 0.05)';
+                    } else {
+                        updateTextWithAnimation('val-pressure', "NO");
+                        pressureCard.style.borderColor = 'var(--border)';
+                        pressureCard.style.background = 'rgba(255, 255, 255, 0.03)';
+                    }
+                }
+            } catch (err) {
+                console.error("Telemetry error:", err);
+            }
+        }
+
+        // Poll every 300ms for snappier updates
+        setInterval(updateTelemetry, 300);
+        addLog("Neural link established. System ready.");
+    </script>
+
+</body>
+</html>

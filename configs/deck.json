@@ -1,0 +1,20 @@
+{
+    "name": "Standard Default",
+    "win_conditions": [
+        "hog_rider",
+        "ram_rider",
+        "balloon",
+        "goblin_barrel",
+        "miner",
+        "wall_breakers",
+        "battle_ram"
+    ],
+    "tanks": [
+        "giant",
+        "golem",
+        "pekka",
+        "mega_knight",
+        "lava_hound",
+        "royal_giant"
+    ]
+}

@@ -1,0 +1,123 @@
+"""
+Asynchronous Real-Time Engine for TITAN.
+Decouples screen capture from AI inference so the game feed
+never stutters. Runs YOLO detection on a background thread
+and only processes every Nth frame for maximum speed.
+"""
+
+import threading
+import time
+import cv2
+
+from engine.pipeline import Pipeline
+from vision.screen_classifier import ScreenState
+
+
+class AsyncEngine:
+    """
+    Wraps the synchronous Pipeline in an async architecture.
+
+    - The main thread captures frames at full speed.
+    - A background worker thread runs the AI pipeline on every Nth frame.
+    - Results are stored and can be read by the main thread at any time
+      without waiting for inference to complete.
+    """
+
+    def __init__(self, model_path, process_every_n=4):
+        """
+        Args:
+            model_path: Path to the YOLO model (.pt or .onnx)
+            process_every_n: Only run AI on every Nth frame (default=4).
+                             At 30fps video, this means ~7.5 inferences/sec.
+        """
+        self.pipeline = Pipeline(model_path)
+        self.process_every_n = process_every_n
+
+        # Latest results (thread-safe via lock)
+        self._lock = threading.Lock()
+        self._latest_game_state = None
+        self._latest_action = None
+        self._latest_screen_state = ScreenState.UNKNOWN
+        self._latest_suggestion = None
+
+        # Frame counter
+        self._frame_count = 0
+
+        # Background thread control
+        self._worker_thread = None
+        self._pending_frame = None
+        self._processing = False
+        self._running = False
+
+    def start(self):
+        """Start the background processing thread."""
+        self._running = True
+        self._worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
+        self._worker_thread.start()
+
+    def stop(self):
+        """Stop the background processing thread."""
+        self._running = False
+        if self._worker_thread:
+            self._worker_thread.join(timeout=2.0)
+
+    def submit_frame(self, frame):
+        """
+        Submit a new frame for processing.
+        Only every Nth frame is actually sent to the AI.
+        Returns the latest cached results immediately.
+
+        Args:
+            frame: BGR image (numpy array)
+
+        Returns:
+            tuple: (game_state, action, screen_state, suggestion)
+        """
+        self._frame_count += 1
+
+        # Only queue every Nth frame for AI processing
+        if self._frame_count % self.process_every_n == 0:
+            with self._lock:
+                if not self._processing:
+                    self._pending_frame = frame.copy()
+
+        # Always return the latest cached results (zero latency)
+        with self._lock:
+            return (
+                self._latest_game_state,
+                self._latest_action,
+                self._latest_screen_state,
+                self._latest_suggestion,
+            )
+
+    def _worker_loop(self):
+        """Background thread that processes queued frames."""
+        while self._running:
+            frame = None
+
+            with self._lock:
+                if self._pending_frame is not None:
+                    frame = self._pending_frame
+                    self._pending_frame = None
+                    self._processing = True
+
+            if frame is not None:
+                try:
+                    game_state, action, screen_state, suggestion = self.pipeline.process_frame(
+                        frame
+                    )
+
+                    with self._lock:
+                        self._latest_game_state = game_state
+                        self._latest_action = action
+                        self._latest_screen_state = screen_state
+                        self._latest_suggestion = suggestion
+                        self._processing = False
+
+                except Exception as e:
+                    print(f"[AsyncEngine] Error: {e}")
+                    with self._lock:
+                        self._processing = False
+            else:
+                # No frame to process, sleep briefly to avoid busy-waiting
+                time.sleep(0.005)
