@@ -45,6 +45,10 @@ graph TD
 - Python 3.10+
 - BlueStacks 5 (or any Android Emulator supporting ADB)
 - `adb` added to your system PATH.
+- **Tesseract OCR**: You must install the Tesseract system binary. 
+  - **Windows**: Download from [UB-Mannheim](https://github.com/UB-Mannheim/tesseract/wiki) and add to PATH.
+  - **Linux**: `sudo apt install tesseract-ocr`
+  - **macOS**: `brew install tesseract`
 
 ### 1. Installation
 Clone the repository and install the dependencies:

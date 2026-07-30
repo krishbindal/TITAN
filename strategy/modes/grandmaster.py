@@ -28,9 +28,14 @@ _card_db = CardDatabase()
 _last_action_time = 0
 _MIN_ACTION_DELAY = 1.5  # seconds between plays
 
+def reset():
+    """Reset the grandmaster state for a new match."""
+    global _last_action_time
+    _last_action_time = 0
+
 # ─── Card Role Classification ───
 SPELLS = {"log", "zap", "fireball", "arrows", "poison", "rocket", 
-          "lightning", "snow_ball", "tornado", "earthquake"}
+          "lightning", "snowball", "tornado", "earthquake"}
 TANKS = {"giant", "golem", "pekka", "mega_knight", "lava_hound", 
          "royal_giant", "goblin_giant", "skeleton_giant"}
 WIN_CONDITIONS = {"hog_rider", "ram_rider", "balloon", "goblin_barrel", 

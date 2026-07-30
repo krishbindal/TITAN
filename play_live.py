@@ -63,14 +63,10 @@ def get_dashboard_frame():
 def get_dashboard_telemetry():
     return _latest_telemetry
 
-def update_telemetry(frame, screen_state, action, game_state, pipeline, suggestion, fps, visualizer):
+def update_telemetry(frame, screen_state, action, game_state, pipeline, suggestion, fps, visualizer, engine_telemetry):
     global _latest_frame, _latest_telemetry
     
-    detections = (
-        pipeline.pipeline.tracker.get_confirmed_tracks()
-        if screen_state and screen_state.name == "GAMEPLAY"
-        else []
-    )
+    detections = engine_telemetry.get("detections", []) if engine_telemetry else []
 
     action_name = "WAIT"
     if action:
@@ -79,22 +75,18 @@ def update_telemetry(frame, screen_state, action, game_state, pipeline, suggesti
         else:
             action_name = action.action.name
 
-    if game_state and hasattr(pipeline, "pipeline"):
-        threat_report = pipeline.pipeline.strategy.get_threat_report(game_state)
-        elixir_adv = pipeline.pipeline.strategy.elixir.get_elixir_advantage()
-        memory = pipeline.pipeline.strategy.memory
-        
+    if game_state and engine_telemetry:
         _latest_telemetry = {
             "status": "active",
             "fps": fps,
-            "strategy_mode": pipeline.pipeline.strategy._mode.__name__.split(".")[-1],
+            "strategy_mode": engine_telemetry.get("strategy_mode", "standard"),
             "action": action_name,
             "suggestion": suggestion or "",
-            "elixir_advantage": elixir_adv,
-            "enemy_elixir": memory.enemy_elixir,
-            "predicted_deck": list(memory.deck),
-            "hot_lane": threat_report.hot_lane,
-            "pressure": threat_report.pressure,
+            "elixir_advantage": engine_telemetry.get("elixir_advantage", 0.0),
+            "enemy_elixir": engine_telemetry.get("enemy_elixir", 0.0),
+            "predicted_deck": engine_telemetry.get("predicted_deck", []),
+            "hot_lane": engine_telemetry.get("hot_lane", "balanced"),
+            "pressure": engine_telemetry.get("pressure", False),
         }
     else:
         _latest_telemetry["status"] = "active"
@@ -142,7 +134,7 @@ def run_play_mode(adb, pipeline, visualizer, navigator, deck_builder):
             consecutive_failures = 0
             
             # Submit to AI
-            game_state, action, screen_state, suggestion, result_id = pipeline.submit_frame(frame)
+            game_state, action, screen_state, suggestion, result_id, engine_telemetry = pipeline.submit_frame(frame)
             if screen_state is None:
                 time.sleep(0.01)
                 continue
@@ -151,7 +143,7 @@ def run_play_mode(adb, pipeline, visualizer, navigator, deck_builder):
             fps = 1.0 / elapsed if elapsed > 0 else 0
             
             # Update telemetry and dashboard
-            annotated_frame = update_telemetry(frame, screen_state, action, game_state, pipeline, suggestion, fps, visualizer)
+            annotated_frame = update_telemetry(frame, screen_state, action, game_state, pipeline, suggestion, fps, visualizer, engine_telemetry)
             if replay_logger:
                 replay_logger.log_frame(annotated_frame)
                 
@@ -210,9 +202,9 @@ def run_play_mode(adb, pipeline, visualizer, navigator, deck_builder):
                     logger.info(f"Match Concluded. Result: {'VICTORY' if won else 'DEFEAT'}")
                     
                     if won:
-                        pipeline.pipeline.strategy.reset_match()
+                        pipeline.pipeline.reset()
                     else:
-                        pipeline.pipeline.strategy.reset_match()
+                        pipeline.pipeline.reset()
                     
                     if match_logger:
                         match_logger.end_match(won=won)
@@ -222,7 +214,7 @@ def run_play_mode(adb, pipeline, visualizer, navigator, deck_builder):
                         replay_logger = None
                         
                     deck_builder.record_match_result(won=won)
-                    if hasattr(pipeline.pipeline.strategy, "_mode") and pipeline.pipeline.strategy._mode.__name__.endswith("rl"):
+                    if hasattr(pipeline.pipeline.strategy, "is_rl_mode") and pipeline.pipeline.strategy.is_rl_mode:
                         pipeline.pipeline.strategy._mode.apply_match_result(won=won)
                         
                     last_match_won = won
@@ -274,11 +266,9 @@ def run_manage_mode(adb, navigator, collection_reader, deck_builder, build_deck=
             time.sleep(1)
             continue
             
-        # Simplified home check
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        nav_roi = hsv[1180:1260, 50:670]
-        blue_mask = cv2.inRange(nav_roi, np.array([100, 100, 50]), np.array([130, 255, 255]))
-        if nav_roi.size > 0 and (cv2.countNonZero(blue_mask) / (nav_roi.shape[0] * nav_roi.shape[1])) > 0.05:
+        from vision.screen_classifier import ScreenClassifier, ScreenState
+        classifier = ScreenClassifier()
+        if classifier.classify(frame) == ScreenState.HOME_SCREEN:
             logger.info("Home screen detected.")
             state = AppState.HOME_SCREEN
             break
@@ -326,11 +316,7 @@ def main():
     logger.info("Initializing ADB Controller...")
     adb = ADBController("127.0.0.1:5555")
 
-    # In Management mode, we don't strictly need the async ML pipeline running,
-    # but UINavigator uses some cv2, so we load what's necessary.
-    import cv2
-    import numpy as np
-
+    # In Management mode, we don't strictly need the async ML pipeline running.
     logger.info("Initializing Management Modules...")
     navigator = UINavigator(adb)
     collection_reader = CollectionReader()

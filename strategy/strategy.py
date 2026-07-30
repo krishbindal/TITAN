@@ -43,10 +43,16 @@ class Strategy:
         self.session_id = int(time.time())
         self.logger = DecisionLogger(get_engine(), self.session_id)
 
+    @property
+    def is_rl_mode(self):
+        return self._mode.__name__.endswith("rl")
+
     def reset_match(self):
         """Reset all stateful subsystems for a new match."""
         self.elixir = ElixirTracker()
         self.memory.clear()
+        if hasattr(self._mode, 'reset'):
+            self._mode.reset()
 
     def decide(self, game_state, ui_state=None, game_time=0.0):
         """
@@ -57,9 +63,17 @@ class Strategy:
         self.memory.update(game_state, game_time)
 
         # Delegate to active mode
-        result = self._mode.decide(
-            game_state, self.threat, self.elixir, self.memory, self.placement
-        )
+        if hasattr(self._mode, 'decide'):
+            try:
+                # Try passing all args including game_time and ui_state (for grandmaster)
+                result = self._mode.decide(
+                    game_state, self.threat, self.elixir, self.memory, self.placement, game_time=game_time, ui_state=ui_state
+                )
+            except TypeError:
+                # Fallback for standard mode
+                result = self._mode.decide(
+                    game_state, self.threat, self.elixir, self.memory, self.placement
+                )
         
         # Handle different return signatures (Standard mode vs others)
         if len(result) == 3:
@@ -73,7 +87,7 @@ class Strategy:
             self.logger.log(
                 game_time=game_time,
                 my_elixir=self.elixir.player_elixir,
-                enemy_elixir=self.memory.enemy_elixir,
+                enemy_elixir=self.elixir.opponent_elixir,
                 best_action=action_cmd,
                 best_reason=suggestion,
                 all_scores=all_scores,

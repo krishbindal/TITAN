@@ -7,7 +7,7 @@ class Detector:
 
     def __init__(self, model_path, confidence=0.4):
         self.model = YOLO(model_path)
-        self.confidence = 0.25
+        self.confidence = confidence
         self.device = "0" if torch.cuda.is_available() else "cpu"
         self.half = torch.cuda.is_available()
 
@@ -19,6 +19,7 @@ class Detector:
             frame,
             conf=self.confidence,
             device=self.device,
+            half=self.half,
             verbose=False,
         )
 

@@ -19,6 +19,7 @@ class Tracker:
     def update(self, detections, frame_number):
 
         matched_tracks = set()
+        start_next_id = self.next_id
 
         # Match detections
         for detection in detections:
@@ -54,9 +55,7 @@ class Tracker:
 
         # Mark missed for tracks that were not matched
         for track in self.tracks:
-            if track.id not in matched_tracks and track.id < self.next_id - len(
-                detections
-            ):
+            if track.id not in matched_tracks and track.id < start_next_id:
                 # Only mark missed if it's an old track (not one we just appended)
                 track.mark_missed()
 

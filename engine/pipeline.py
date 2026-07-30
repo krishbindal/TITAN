@@ -33,6 +33,14 @@ class Pipeline:
         self.frame_count = 0
         self.match_start_time = None
 
+    def reset(self):
+        """Reset internal state for a new match."""
+        self.tracker = Tracker()
+        self.action_detector = ActionDetector()
+        self.frame_count = 0
+        self.match_start_time = None
+        self.strategy.reset_match()
+
     def process_frame(self, frame):
 
         # Step 1: Check if this is a gameplay frame
@@ -44,7 +52,7 @@ class Pipeline:
             # Send terminal states to the RL Trainer for Win/Loss rewards
             if screen_state in [ScreenState.VICTORY, ScreenState.DEFEAT]:
                 self.match_start_time = None
-                if self.strategy._mode.__name__.endswith("rl"):
+                if self.strategy.is_rl_mode:
                     self.strategy.trainer.step(
                         state=None,
                         threat_report=ThreatReport(),
@@ -86,7 +94,7 @@ class Pipeline:
         action, suggestion = self.strategy.decide(game_state, ui_state, game_time)
 
         # Step 9: Train RL Agent (ONLY in RL mode)
-        if self.strategy._mode.__name__.endswith("rl"):
+        if self.strategy.is_rl_mode:
             self.strategy.trainer.step(
                 state=game_state,
                 threat_report=self.strategy.get_threat_report(game_state),

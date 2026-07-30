@@ -21,23 +21,9 @@ class EnemyTracker:
         # We track which specific YOLO detection IDs we've already counted
         # so we don't count the same spawned troop twice.
         self._counted_track_ids = set()
-        
-        # Elixir Tracking
-        self.enemy_elixir = 5.0
-        self.last_update_time = 0.0
 
     def update(self, game_state, game_time=0.0):
         """Update memory based on the current battlefield."""
-        
-        # Natural Elixir Generation
-        if self.last_update_time > 0 and game_time > self.last_update_time:
-            dt = game_time - self.last_update_time
-            # Standard generation: 1 elixir every 2.8s
-            # Double elixir (last 60s): 1 elixir every 1.4s
-            gen_rate = 1.0 / 1.4 if game_time >= 120 else 1.0 / 2.8
-            self.enemy_elixir = min(10.0, self.enemy_elixir + (dt * gen_rate))
-            
-        self.last_update_time = game_time
         
         for troop in game_state.troops:
             if troop.team != "enemy":
@@ -56,15 +42,6 @@ class EnemyTracker:
 
             # Add to play history
             self.play_history.append(card_key)
-            
-            # Deduct Elixir Cost
-            card_info = self.card_db.get(card_key)
-            if card_info and hasattr(card_info, 'cost') and card_info.cost:
-                self.enemy_elixir = max(0.0, self.enemy_elixir - card_info.cost)
-
-    def get_elixir_advantage(self, player_elixir):
-        """Returns the elixir advantage (+ is good for player, - is bad)."""
-        return player_elixir - self.enemy_elixir
 
     def is_in_cycle(self, card_key):
         """
@@ -90,7 +67,7 @@ class EnemyTracker:
         """
         win_conditions = {
             "hog_rider", "giant", "golem", "balloon", "miner", 
-            "goblin_barrel", "royal_giant", "wall_breaker", "battle_ram",
+            "goblin_barrel", "royal_giant", "wall_breakers", "battle_ram",
             "ram_rider", "goblin_drill", "skeleton_barrel", "graveyard",
             "lava_hound", "xbow", "mortar"
         }
@@ -106,8 +83,6 @@ class EnemyTracker:
         self.deck.clear()
         self.play_history.clear()
         self._counted_track_ids.clear()
-        self.enemy_elixir = 5.0
-        self.last_update_time = 0.0
 
     def __str__(self):
         deck_str = ", ".join(self.deck) if self.deck else "Unknown"
@@ -116,6 +91,5 @@ class EnemyTracker:
         )
         return (
             f"Enemy Deck [{len(self.deck)}/8]: {deck_str}\n"
-            f"Recent Plays: {history_str}\n"
-            f"Est. Enemy Elixir: {self.enemy_elixir:.1f}"
+            f"Recent Plays: {history_str}"
         )
