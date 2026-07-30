@@ -43,13 +43,14 @@ class Pipeline:
             
             # Send terminal states to the RL Trainer for Win/Loss rewards
             if screen_state in [ScreenState.VICTORY, ScreenState.DEFEAT]:
-                self.strategy.trainer.step(
-                    state=None,
-                    threat_report=ThreatReport(),
-                    elixir_tracker=self.strategy.elixir,
-                    action=None,
-                    screen_state=screen_state
-                )
+                if self.strategy._mode.__name__.endswith("rl"):
+                    self.strategy.trainer.step(
+                        state=None,
+                        threat_report=ThreatReport(),
+                        elixir_tracker=self.strategy.elixir,
+                        action=None,
+                        screen_state=screen_state
+                    )
                 
             return None, None, screen_state, None
 
@@ -79,14 +80,15 @@ class Pipeline:
         game_time = time.time() - self.start_time
         action, suggestion = self.strategy.decide(game_state, ui_state, game_time)
 
-        # Step 9: Train RL Agent
-        self.strategy.trainer.step(
-            state=game_state,
-            threat_report=self.strategy.get_threat_report(game_state),
-            elixir_tracker=self.strategy.elixir,
-            action=action.action.name if action else "WAIT",
-            screen_state=screen_state
-        )
+        # Step 9: Train RL Agent (ONLY in RL mode)
+        if self.strategy._mode.__name__.endswith("rl"):
+            self.strategy.trainer.step(
+                state=game_state,
+                threat_report=self.strategy.get_threat_report(game_state),
+                elixir_tracker=self.strategy.elixir,
+                action=action.action.name if action else "WAIT",
+                screen_state=screen_state
+            )
 
         self.frame_count += 1
 

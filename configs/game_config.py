@@ -14,8 +14,8 @@ AVERAGE_CARD_LEVEL = 14
 CURRENT_ARENA = "challenger_2"
 
 # === Game Mode ===
-# The active AI mode: 'standard', 'sudden_death', or 'rl'
-GAME_MODE = "rl"
+# The active AI mode: 'standard', 'sudden_death', 'rl', or 'grandmaster'
+GAME_MODE = "grandmaster"
 
 # === Level Inference ===
 ARENA_LEVEL_MAP = {

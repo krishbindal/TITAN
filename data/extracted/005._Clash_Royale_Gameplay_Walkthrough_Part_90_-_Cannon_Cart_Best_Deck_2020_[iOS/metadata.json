@@ -1,0 +1,363 @@
+{
+  "video": "005. Clash Royale Gameplay Walkthrough Part 90 - Cannon Cart Best Deck 2020 [iOSAndroid].mp4",
+  "started": "2026-07-27T04:22:39.542159",
+  "finished": "2026-07-27T04:25:21.855413",
+  "total_extracted": 71,
+  "frames": [
+    {
+      "index": 0,
+      "path": "frame_00000.jpg",
+      "original_frame": 0
+    },
+    {
+      "index": 1,
+      "path": "frame_00001.jpg",
+      "original_frame": 30
+    },
+    {
+      "index": 2,
+      "path": "frame_00002.jpg",
+      "original_frame": 120
+    },
+    {
+      "index": 3,
+      "path": "frame_00003.jpg",
+      "original_frame": 240
+    },
+    {
+      "index": 4,
+      "path": "frame_00004.jpg",
+      "original_frame": 270
+    },
+    {
+      "index": 5,
+      "path": "frame_00005.jpg",
+      "original_frame": 300
+    },
+    {
+      "index": 6,
+      "path": "frame_00006.jpg",
+      "original_frame": 330
+    },
+    {
+      "index": 7,
+      "path": "frame_00007.jpg",
+      "original_frame": 390
+    },
+    {
+      "index": 8,
+      "path": "frame_00008.jpg",
+      "original_frame": 420
+    },
+    {
+      "index": 9,
+      "path": "frame_00009.jpg",
+      "original_frame": 480
+    },
+    {
+      "index": 10,
+      "path": "frame_00010.jpg",
+      "original_frame": 11130
+    },
+    {
+      "index": 11,
+      "path": "frame_00011.jpg",
+      "original_frame": 11190
+    },
+    {
+      "index": 12,
+      "path": "frame_00012.jpg",
+      "original_frame": 11250
+    },
+    {
+      "index": 13,
+      "path": "frame_00013.jpg",
+      "original_frame": 11280
+    },
+    {
+      "index": 14,
+      "path": "frame_00014.jpg",
+      "original_frame": 11370
+    },
+    {
+      "index": 15,
+      "path": "frame_00015.jpg",
+      "original_frame": 11580
+    },
+    {
+      "index": 16,
+      "path": "frame_00016.jpg",
+      "original_frame": 11640
+    },
+    {
+      "index": 17,
+      "path": "frame_00017.jpg",
+      "original_frame": 11700
+    },
+    {
+      "index": 18,
+      "path": "frame_00018.jpg",
+      "original_frame": 11730
+    },
+    {
+      "index": 19,
+      "path": "frame_00019.jpg",
+      "original_frame": 12180
+    },
+    {
+      "index": 20,
+      "path": "frame_00020.jpg",
+      "original_frame": 12210
+    },
+    {
+      "index": 21,
+      "path": "frame_00021.jpg",
+      "original_frame": 12300
+    },
+    {
+      "index": 22,
+      "path": "frame_00022.jpg",
+      "original_frame": 12330
+    },
+    {
+      "index": 23,
+      "path": "frame_00023.jpg",
+      "original_frame": 12360
+    },
+    {
+      "index": 24,
+      "path": "frame_00024.jpg",
+      "original_frame": 12420
+    },
+    {
+      "index": 25,
+      "path": "frame_00025.jpg",
+      "original_frame": 12450
+    },
+    {
+      "index": 26,
+      "path": "frame_00026.jpg",
+      "original_frame": 12480
+    },
+    {
+      "index": 27,
+      "path": "frame_00027.jpg",
+      "original_frame": 12540
+    },
+    {
+      "index": 28,
+      "path": "frame_00028.jpg",
+      "original_frame": 23190
+    },
+    {
+      "index": 29,
+      "path": "frame_00029.jpg",
+      "original_frame": 23250
+    },
+    {
+      "index": 30,
+      "path": "frame_00030.jpg",
+      "original_frame": 23310
+    },
+    {
+      "index": 31,
+      "path": "frame_00031.jpg",
+      "original_frame": 23340
+    },
+    {
+      "index": 32,
+      "path": "frame_00032.jpg",
+      "original_frame": 23370
+    },
+    {
+      "index": 33,
+      "path": "frame_00033.jpg",
+      "original_frame": 23460
+    },
+    {
+      "index": 34,
+      "path": "frame_00034.jpg",
+      "original_frame": 23790
+    },
+    {
+      "index": 35,
+      "path": "frame_00035.jpg",
+      "original_frame": 23820
+    },
+    {
+      "index": 36,
+      "path": "frame_00036.jpg",
+      "original_frame": 23850
+    },
+    {
+      "index": 37,
+      "path": "frame_00037.jpg",
+      "original_frame": 23880
+    },
+    {
+      "index": 38,
+      "path": "frame_00038.jpg",
+      "original_frame": 24180
+    },
+    {
+      "index": 39,
+      "path": "frame_00039.jpg",
+      "original_frame": 24210
+    },
+    {
+      "index": 40,
+      "path": "frame_00040.jpg",
+      "original_frame": 24420
+    },
+    {
+      "index": 41,
+      "path": "frame_00041.jpg",
+      "original_frame": 24690
+    },
+    {
+      "index": 42,
+      "path": "frame_00042.jpg",
+      "original_frame": 24780
+    },
+    {
+      "index": 43,
+      "path": "frame_00043.jpg",
+      "original_frame": 24900
+    },
+    {
+      "index": 44,
+      "path": "frame_00044.jpg",
+      "original_frame": 24930
+    },
+    {
+      "index": 45,
+      "path": "frame_00045.jpg",
+      "original_frame": 25080
+    },
+    {
+      "index": 46,
+      "path": "frame_00046.jpg",
+      "original_frame": 25110
+    },
+    {
+      "index": 47,
+      "path": "frame_00047.jpg",
+      "original_frame": 25140
+    },
+    {
+      "index": 48,
+      "path": "frame_00048.jpg",
+      "original_frame": 25170
+    },
+    {
+      "index": 49,
+      "path": "frame_00049.jpg",
+      "original_frame": 25200
+    },
+    {
+      "index": 50,
+      "path": "frame_00050.jpg",
+      "original_frame": 25230
+    },
+    {
+      "index": 51,
+      "path": "frame_00051.jpg",
+      "original_frame": 25290
+    },
+    {
+      "index": 52,
+      "path": "frame_00052.jpg",
+      "original_frame": 25320
+    },
+    {
+      "index": 53,
+      "path": "frame_00053.jpg",
+      "original_frame": 25440
+    },
+    {
+      "index": 54,
+      "path": "frame_00054.jpg",
+      "original_frame": 25470
+    },
+    {
+      "index": 55,
+      "path": "frame_00055.jpg",
+      "original_frame": 25500
+    },
+    {
+      "index": 56,
+      "path": "frame_00056.jpg",
+      "original_frame": 25560
+    },
+    {
+      "index": 57,
+      "path": "frame_00057.jpg",
+      "original_frame": 25590
+    },
+    {
+      "index": 58,
+      "path": "frame_00058.jpg",
+      "original_frame": 25650
+    },
+    {
+      "index": 59,
+      "path": "frame_00059.jpg",
+      "original_frame": 35040
+    },
+    {
+      "index": 60,
+      "path": "frame_00060.jpg",
+      "original_frame": 35100
+    },
+    {
+      "index": 61,
+      "path": "frame_00061.jpg",
+      "original_frame": 35160
+    },
+    {
+      "index": 62,
+      "path": "frame_00062.jpg",
+      "original_frame": 35190
+    },
+    {
+      "index": 63,
+      "path": "frame_00063.jpg",
+      "original_frame": 35310
+    },
+    {
+      "index": 64,
+      "path": "frame_00064.jpg",
+      "original_frame": 35550
+    },
+    {
+      "index": 65,
+      "path": "frame_00065.jpg",
+      "original_frame": 35700
+    },
+    {
+      "index": 66,
+      "path": "frame_00066.jpg",
+      "original_frame": 36450
+    },
+    {
+      "index": 67,
+      "path": "frame_00067.jpg",
+      "original_frame": 36480
+    },
+    {
+      "index": 68,
+      "path": "frame_00068.jpg",
+      "original_frame": 36510
+    },
+    {
+      "index": 69,
+      "path": "frame_00069.jpg",
+      "original_frame": 36630
+    },
+    {
+      "index": 70,
+      "path": "frame_00070.jpg",
+      "original_frame": 36660
+    }
+  ]
+}

@@ -209,6 +209,11 @@ def run_play_mode(adb, pipeline, visualizer, navigator, deck_builder):
                     won = (screen_state.name == "VICTORY")
                     logger.info(f"Match Concluded. Result: {'VICTORY' if won else 'DEFEAT'}")
                     
+                    if won:
+                        pipeline.pipeline.strategy.reset_match()
+                    else:
+                        pipeline.pipeline.strategy.reset_match()
+                    
                     if match_logger:
                         match_logger.end_match(won=won)
                         match_logger = None

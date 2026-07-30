@@ -65,6 +65,27 @@ COUNTER_MATRIX = {
     "lumberjack": ["skeleton_army", "knight", "mini_pekka"],
     "fire_cracker": ["log", "arrows", "fireball", "zap"],
     "fire_ball": ["zap", "log"],
+    # --- Missing Troops ---
+    "ice_golem": ["skeleton_army", "minions", "mega_minion"],
+    "ice_wizard": ["fireball", "knight", "mini_pekka"],
+    "ice_spirit": ["skeletons", "log"],
+    "fire_spirit": ["log", "zap"],
+    "electro_spirit": ["log", "zap"],
+    "mega_minion": ["musketeer", "minions", "ice_wizard"],
+    "inferno_dragon": ["zap", "electro_wizard", "bats", "minions"],
+    "night_witch": ["valkyrie", "knight", "fireball"],
+    "royal_hogs": ["fireball", "bomb_tower", "valkyrie"],
+    "three_musketeers": ["fireball", "lightning", "rocket"],
+    "elite_barbarians": ["skeleton_army", "pekka", "valkyrie", "tombstone"],
+    "dart_goblin": ["log", "zap", "arrows"],
+    "magic_archer": ["fireball", "knight", "mini_pekka"],
+    "hunter": ["knight", "fireball", "skeleton_army"],
+    "goblin_drill": ["valkyrie", "mini_pekka", "skeleton_army"],
+    "skeleton_barrel": ["zap", "arrows", "bats"],
+    "flying_machine": ["fireball", "musketeer", "minions"],
+    "battle_ram": ["skeleton_army", "tombstone", "mini_pekka"],
+    "mother_witch": ["fireball", "knight", "mini_pekka"],
+    "phoenix": ["tornado", "lightning", "rocket"],
 }
 
 

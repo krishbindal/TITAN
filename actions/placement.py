@@ -76,6 +76,21 @@ class PlacementEngine:
             "battle_ram",
         }
 
+    def _find_allied_tank(self, game_state):
+        """Find the furthest-forward allied tank for support stacking."""
+        best_tank = None
+        best_y = 9999  # Lower Y = further toward enemy
+        
+        for troop in game_state.troops:
+            if troop.team != "ally":
+                continue
+            card_key = troop.name.replace("ally_", "")
+            if card_key in self.tanks and troop.y < best_y:
+                best_y = troop.y
+                best_tank = troop
+        
+        return best_tank
+
     def calculate_drop(self, card_to_play, threat_report, game_state):
         """
         Calculate optimal (x, y) coordinates to drop the card.
@@ -107,7 +122,7 @@ class PlacementEngine:
 
         # 1. Offensive Push (No immediate pressure)
         if not threat_report.pressure or not threat_report.top_threat:
-            return self._calculate_offensive_drop(card_to_play, threat_report)
+            return self._calculate_offensive_drop(card_to_play, threat_report, game_state)
 
         # 2. Defensive Placement (Under pressure)
         target = threat_report.top_threat
@@ -146,9 +161,21 @@ class PlacementEngine:
             # Drop high enough to pull them into the other lane if possible
             return int(pull_x), int(self.center_pull_y - 50)
 
+        # --- Split Push Detection ---
+        left_enemies = [t for t in game_state.troops 
+                       if t.team == "enemy" and t.x < self.center_x]
+        right_enemies = [t for t in game_state.troops 
+                        if t.team == "enemy" and t.x >= self.center_x]
+        
+        if left_enemies and right_enemies and card_to_play in self.buildings:
+            # Under split push — place building in CENTER to pull from both lanes
+            return 360, int(self.center_pull_y)
+
         # --- Standard Defenses ---
         if card_to_play in self.spells:
-            # Spells go directly on the target
+            # Spells should hit the cluster centroid, not just one troop
+            if push_count > 1:
+                return centroid_x, centroid_y
             return int(target.x), int(target.y)
 
         if card_to_play in self.buildings:
@@ -181,7 +208,7 @@ class PlacementEngine:
         # Drop slightly in front of the target to intercept using kinematic lead
         return int(target.x), int(target.y + lead_y)
 
-    def _calculate_offensive_drop(self, card, report):
+    def _calculate_offensive_drop(self, card, report, game_state):
         """Determine where to drop a card when pushing."""
         # Determine which lane we are pushing
         push_x = 180 if report.hot_lane == "left" else 540
@@ -194,6 +221,13 @@ class PlacementEngine:
             else:
                 # Bridge spam
                 return push_x, self.bridge_y
+
+        # If we have an allied tank pushing, stack support behind it
+        if card in self.ranged or card in (self.tanks - {card}):
+            allied_tank = self._find_allied_tank(game_state)
+            if allied_tank and allied_tank.y < 900:  # Tank is in our half or crossing
+                # Place support troop BEHIND the tank (higher Y = further back)
+                return int(allied_tank.x), int(allied_tank.y + 120)
 
         if card in self.tanks:
             # Drop tanks in the back (behind king tower) to build a push

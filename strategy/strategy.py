@@ -12,6 +12,7 @@ from configs.game_config import GAME_MODE
 from learning.trainer import Trainer
 
 from strategy.modes import standard, sudden_death, rl
+from strategy.modes import grandmaster
 from core.analytics import get_engine, DecisionLogger
 import time
 
@@ -20,6 +21,7 @@ MODE_REGISTRY = {
     "standard": standard,
     "sudden_death": sudden_death,
     "rl": rl,
+    "grandmaster": grandmaster,
 }
 
 
@@ -40,6 +42,11 @@ class Strategy:
         # Initialize Analytics Logger
         self.session_id = int(time.time())
         self.logger = DecisionLogger(get_engine(), self.session_id)
+
+    def reset_match(self):
+        """Reset all stateful subsystems for a new match."""
+        self.elixir = ElixirTracker()
+        self.memory.clear()
 
     def decide(self, game_state, ui_state=None, game_time=0.0):
         """
