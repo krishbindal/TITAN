@@ -1,0 +1,59 @@
+hog_rider:
+  roles: ["win_condition", "bridge_spam"]
+  strengths: ["punish", "building_target"]
+  weaknesses: ["swarm", "defensive_building", "tank_killer"]
+  kiting_priority: 10
+
+knight:
+  roles: ["mini_tank", "cycle"]
+  strengths: ["defense", "distraction"]
+  weaknesses: ["air", "swarm"]
+  kiting_priority: 4
+
+valkyrie:
+  roles: ["mini_tank", "splash"]
+  strengths: ["anti_swarm", "defense"]
+  weaknesses: ["air", "tank_killer"]
+  kiting_priority: 5
+
+musketeer:
+  roles: ["support", "anti_air"]
+  strengths: ["range", "air_defense"]
+  weaknesses: ["spell_vulnerable", "swarm"]
+  kiting_priority: 3
+
+pekka:
+  roles: ["tank_killer", "beatdown"]
+  strengths: ["high_damage", "defense"]
+  weaknesses: ["swarm", "air", "kiting"]
+  kiting_priority: 8
+
+skeleton_army:
+  roles: ["swarm", "spell_bait"]
+  strengths: ["tank_killer", "distraction"]
+  weaknesses: ["splash", "spells"]
+  kiting_priority: 1
+
+baby_dragon:
+  roles: ["support", "splash", "air"]
+  strengths: ["anti_swarm", "air_tank"]
+  weaknesses: ["tank_killer", "single_target"]
+  kiting_priority: 5
+
+fireball:
+  roles: ["medium_spell"]
+  strengths: ["anti_support", "tower_damage"]
+  weaknesses: []
+  kiting_priority: 0
+
+princess_tower:
+  roles: ["defensive_building"]
+  strengths: []
+  weaknesses: []
+  kiting_priority: 0
+
+king_tower:
+  roles: ["defensive_building"]
+  strengths: []
+  weaknesses: []
+  kiting_priority: 0

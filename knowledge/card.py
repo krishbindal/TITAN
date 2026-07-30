@@ -1,39 +1,56 @@
-class Card:
+from typing import List, Literal, Optional
+from pydantic import BaseModel, Field
 
-    def __init__(
-        self,
-        name,
-        cost,
-        card_type,
-        target=None,
-        speed=None,
-        range=None,
-        hp=0,
-        damage=0,
-        hit_speed=1.0,
-        count=1,
-        deploy_time=1.0,
-    ):
+class CardMetadata(BaseModel):
+    id: int
+    name: str
+    rarity: str
+    cost: int = Field(ge=0)
+    type: Literal["troop", "building", "spell"]
+    arena: int
+    is_evolution: bool = False
+    is_champion: bool = False
 
-        self.name = name
-        self.cost = cost
-        self.card_type = card_type
-        self.target = target
-        self.speed = speed
-        self.range = range
+class CombatStats(BaseModel):
+    hp: int = Field(ge=0)
+    damage: int = Field(ge=0)
+    dps: int = Field(ge=0)
+    hit_speed: float = Field(ge=0.0)
+    range: float = Field(ge=0.0)
+    speed_numeric: int = Field(ge=0)
+    speed_class: str
+    target_type: Literal["ground", "air_ground", "building", "any"]
+    targets_air: bool
+    targets_ground: bool
+    splash_radius: float = Field(ge=0.0)
+    projectile_speed: Optional[float] = None
+    deploy_time: float = Field(ge=0.0)
+    count: int = Field(ge=1)
 
-        # Deep Stats
-        self.hp = hp
-        self.damage = damage
-        self.hit_speed = hit_speed
-        self.count = count
-        self.deploy_time = deploy_time
+class Mechanics(BaseModel):
+    shield_hp: int = 0
+    death_damage: int = 0
+    charge_damage: int = 0
+    stun_duration: float = 0.0
+    knockback: bool = False
+    jumps_river: bool = False
+
+class AITags(BaseModel):
+    roles: List[str] = Field(default_factory=list)
+    strengths: List[str] = Field(default_factory=list)
+    weaknesses: List[str] = Field(default_factory=list)
+    kiting_priority: int = 0
+
+class CardModel(BaseModel):
+    metadata: CardMetadata
+    combat: CombatStats
+    mechanics: Mechanics
+    ai_tags: AITags
 
     @property
-    def dps(self):
-        if self.hit_speed > 0:
-            return round(self.damage / self.hit_speed)
-        return 0
+    def cost(self) -> int:
+        return self.metadata.cost
 
-    def __str__(self):
-        return f"{self.name} ({self.cost} elixir) | HP: {self.hp} | DPS: {self.dps}"
+    @property
+    def name(self) -> str:
+        return self.metadata.name

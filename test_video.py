@@ -42,7 +42,7 @@ def test_video(video_path):
         frame = cv2.resize(frame, (720, 1280))
 
         # Submit to async engine (returns instantly with cached results)
-        game_state, action, screen_state = engine.submit_frame(frame)
+        game_state, action, screen_state, suggestion, result_id = engine.submit_frame(frame)
 
         # --- Draw Overlays ---
         if screen_state == ScreenState.GAMEPLAY and game_state:

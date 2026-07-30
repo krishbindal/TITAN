@@ -1,15 +1,15 @@
 import json
 import os
 
-from knowledge.card import Card
+from knowledge.card import CardModel
 
 
 class CardDatabase:
 
     def __init__(self):
 
-        # Resolve path relative to this file, not the working directory
-        json_path = os.path.join(os.path.dirname(__file__), "cards.json")
+        # Resolve path relative to this file
+        json_path = os.path.join(os.path.dirname(__file__), "titan_cards.json")
 
         with open(json_path) as f:
             raw = json.load(f)
@@ -17,21 +17,13 @@ class CardDatabase:
         self.cards = {}
 
         for name, data in raw.items():
-            self.cards[name] = Card(
-                name=data.get("name", name),
-                cost=data.get("cost"),
-                card_type=data.get("type"),
-                target=data.get("target"),
-                speed=data.get("speed"),
-                range=data.get("range"),
-                hp=data.get("hp", 0),
-                damage=data.get("damage", 0),
-                hit_speed=data.get("hit_speed", 1.0),
-                count=data.get("count", 1),
-                deploy_time=data.get("deploy_time", 1.0),
-            )
+            self.cards[name] = CardModel(**data)
 
     def get(self, name):
+        """
+        Retrieves the CardModel for a given card name.
+        Returns None if not found.
+        """
         return self.cards.get(name)
 
     def all_cards(self):

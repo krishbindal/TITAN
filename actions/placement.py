@@ -117,8 +117,8 @@ class PlacementEngine:
         lead_y = 30
         enemy_card = self.card_db.get(target.name.replace("enemy_", ""))
         if enemy_card:
-            speed = enemy_card.speed.lower() if enemy_card.speed else "medium"
-            if speed == "very fast":
+            speed = enemy_card.combat.speed_class if enemy_card.combat.speed_class else "medium"
+            if speed == "very_fast":
                 lead_y = 120
             elif speed == "fast":
                 lead_y = 80

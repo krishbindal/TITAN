@@ -39,6 +39,8 @@ class AsyncEngine:
         self._latest_action = None
         self._latest_screen_state = ScreenState.UNKNOWN
         self._latest_suggestion = None
+        self._latest_result_id = 0
+        self._inference_counter = 0
 
         # Frame counter
         self._frame_count = 0
@@ -71,7 +73,7 @@ class AsyncEngine:
             frame: BGR image (numpy array)
 
         Returns:
-            tuple: (game_state, action, screen_state, suggestion)
+            tuple: (game_state, action, screen_state, suggestion, result_id)
         """
         self._frame_count += 1
 
@@ -88,6 +90,7 @@ class AsyncEngine:
                 self._latest_action,
                 self._latest_screen_state,
                 self._latest_suggestion,
+                self._latest_result_id,
             )
 
     def _worker_loop(self):
@@ -108,10 +111,12 @@ class AsyncEngine:
                     )
 
                     with self._lock:
+                        self._inference_counter += 1
                         self._latest_game_state = game_state
                         self._latest_action = action
                         self._latest_screen_state = screen_state
                         self._latest_suggestion = suggestion
+                        self._latest_result_id = self._inference_counter
                         self._processing = False
 
                 except Exception as e:

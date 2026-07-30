@@ -1,10 +1,10 @@
-from knowledge.card import Card
+from knowledge.card import CardModel
 
 
 class LevelScaling:
 
     @staticmethod
-    def get_stats_at_level(card: Card, target_level: int) -> Card:
+    def get_stats_at_level(card: CardModel, target_level: int) -> CardModel:
         """
         Scales a card's HP and Damage to the target level.
         In Clash Royale, stats scale by +10% exactly per level.
@@ -17,20 +17,14 @@ class LevelScaling:
         scale_factor = 1.1**level_diff
 
         # Calculate new scaled stats (rounded to nearest integer as in-game)
-        new_hp = round(card.hp * scale_factor)
-        new_damage = round(card.damage * scale_factor)
+        new_hp = round(card.combat.hp * scale_factor)
+        new_damage = round(card.combat.damage * scale_factor)
+        new_dps = round(card.combat.dps * scale_factor)
+        
+        # We must deepcopy the model so we don't accidentally mutate the master DB
+        scaled_card = card.model_copy(deep=True)
+        scaled_card.combat.hp = new_hp
+        scaled_card.combat.damage = new_damage
+        scaled_card.combat.dps = new_dps
 
-        # Create a new scaled card instance
-        return Card(
-            name=card.name,
-            cost=card.cost,
-            card_type=card.card_type,
-            target=card.target,
-            speed=card.speed,
-            range=card.range,
-            hp=new_hp,
-            damage=new_damage,
-            hit_speed=card.hit_speed,
-            count=card.count,
-            deploy_time=card.deploy_time,
-        )
+        return scaled_card

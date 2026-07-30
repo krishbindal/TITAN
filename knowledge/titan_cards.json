@@ -1,0 +1,497 @@
+{
+    "hog_rider": {
+        "metadata": {
+            "id": 6126977,
+            "name": "Hog Rider",
+            "rarity": "common",
+            "cost": 4,
+            "type": "troop",
+            "arena": 1,
+            "is_evolution": false,
+            "is_champion": false
+        },
+        "combat": {
+            "hp": 1653,
+            "damage": 318,
+            "dps": 199,
+            "hit_speed": 1.6,
+            "range": 1.0,
+            "speed_numeric": 90,
+            "speed_class": "fast",
+            "target_type": "building",
+            "targets_air": false,
+            "targets_ground": true,
+            "splash_radius": 0.0,
+            "projectile_speed": null,
+            "deploy_time": 1.0,
+            "count": 1
+        },
+        "mechanics": {
+            "shield_hp": 0,
+            "death_damage": 0,
+            "charge_damage": 0,
+            "stun_duration": 0.0,
+            "knockback": false,
+            "jumps_river": false
+        },
+        "ai_tags": {
+            "roles": [
+                "win_condition",
+                "bridge_spam"
+            ],
+            "strengths": [
+                "punish",
+                "building_target"
+            ],
+            "weaknesses": [
+                "swarm",
+                "defensive_building",
+                "tank_killer"
+            ],
+            "kiting_priority": 10
+        }
+    },
+    "knight": {
+        "metadata": {
+            "id": 92998674,
+            "name": "Knight",
+            "rarity": "common",
+            "cost": 3,
+            "type": "troop",
+            "arena": 1,
+            "is_evolution": false,
+            "is_champion": false
+        },
+        "combat": {
+            "hp": 1766,
+            "damage": 202,
+            "dps": 168,
+            "hit_speed": 1.2,
+            "range": 1.2,
+            "speed_numeric": 60,
+            "speed_class": "medium",
+            "target_type": "ground",
+            "targets_air": false,
+            "targets_ground": true,
+            "splash_radius": 0.0,
+            "projectile_speed": null,
+            "deploy_time": 1.0,
+            "count": 1
+        },
+        "mechanics": {
+            "shield_hp": 0,
+            "death_damage": 0,
+            "charge_damage": 0,
+            "stun_duration": 0.0,
+            "knockback": false,
+            "jumps_river": false
+        },
+        "ai_tags": {
+            "roles": [
+                "mini_tank",
+                "cycle"
+            ],
+            "strengths": [
+                "defense",
+                "distraction"
+            ],
+            "weaknesses": [
+                "air",
+                "swarm"
+            ],
+            "kiting_priority": 4
+        }
+    },
+    "valkyrie": {
+        "metadata": {
+            "id": 27504473,
+            "name": "Valkyrie",
+            "rarity": "common",
+            "cost": 4,
+            "type": "troop",
+            "arena": 1,
+            "is_evolution": false,
+            "is_champion": false
+        },
+        "combat": {
+            "hp": 1908,
+            "damage": 275,
+            "dps": 183,
+            "hit_speed": 1.5,
+            "range": 1.2,
+            "speed_numeric": 60,
+            "speed_class": "medium",
+            "target_type": "ground",
+            "targets_air": false,
+            "targets_ground": true,
+            "splash_radius": 0.0,
+            "projectile_speed": null,
+            "deploy_time": 1.0,
+            "count": 1
+        },
+        "mechanics": {
+            "shield_hp": 0,
+            "death_damage": 0,
+            "charge_damage": 0,
+            "stun_duration": 0.0,
+            "knockback": false,
+            "jumps_river": false
+        },
+        "ai_tags": {
+            "roles": [
+                "mini_tank",
+                "splash"
+            ],
+            "strengths": [
+                "anti_swarm",
+                "defense"
+            ],
+            "weaknesses": [
+                "air",
+                "tank_killer"
+            ],
+            "kiting_priority": 5
+        }
+    },
+    "musketeer": {
+        "metadata": {
+            "id": 87909533,
+            "name": "Musketeer",
+            "rarity": "common",
+            "cost": 4,
+            "type": "troop",
+            "arena": 1,
+            "is_evolution": false,
+            "is_champion": false
+        },
+        "combat": {
+            "hp": 720,
+            "damage": 218,
+            "dps": 198,
+            "hit_speed": 1.1,
+            "range": 6.0,
+            "speed_numeric": 60,
+            "speed_class": "medium",
+            "target_type": "air_ground",
+            "targets_air": true,
+            "targets_ground": true,
+            "splash_radius": 0.0,
+            "projectile_speed": null,
+            "deploy_time": 1.0,
+            "count": 1
+        },
+        "mechanics": {
+            "shield_hp": 0,
+            "death_damage": 0,
+            "charge_damage": 0,
+            "stun_duration": 0.0,
+            "knockback": false,
+            "jumps_river": false
+        },
+        "ai_tags": {
+            "roles": [
+                "support",
+                "anti_air"
+            ],
+            "strengths": [
+                "range",
+                "air_defense"
+            ],
+            "weaknesses": [
+                "spell_vulnerable",
+                "swarm"
+            ],
+            "kiting_priority": 3
+        }
+    },
+    "pekka": {
+        "metadata": {
+            "id": 92857380,
+            "name": "P.E.K.K.A",
+            "rarity": "common",
+            "cost": 7,
+            "type": "troop",
+            "arena": 1,
+            "is_evolution": false,
+            "is_champion": false
+        },
+        "combat": {
+            "hp": 3760,
+            "damage": 816,
+            "dps": 453,
+            "hit_speed": 1.8,
+            "range": 1.2,
+            "speed_numeric": 45,
+            "speed_class": "slow",
+            "target_type": "ground",
+            "targets_air": false,
+            "targets_ground": true,
+            "splash_radius": 0.0,
+            "projectile_speed": null,
+            "deploy_time": 1.0,
+            "count": 1
+        },
+        "mechanics": {
+            "shield_hp": 0,
+            "death_damage": 0,
+            "charge_damage": 0,
+            "stun_duration": 0.0,
+            "knockback": false,
+            "jumps_river": false
+        },
+        "ai_tags": {
+            "roles": [
+                "tank_killer",
+                "beatdown"
+            ],
+            "strengths": [
+                "high_damage",
+                "defense"
+            ],
+            "weaknesses": [
+                "swarm",
+                "air",
+                "kiting"
+            ],
+            "kiting_priority": 8
+        }
+    },
+    "skeleton_army": {
+        "metadata": {
+            "id": 70213538,
+            "name": "Skeleton Army",
+            "rarity": "common",
+            "cost": 3,
+            "type": "troop",
+            "arena": 1,
+            "is_evolution": false,
+            "is_champion": false
+        },
+        "combat": {
+            "hp": 81,
+            "damage": 81,
+            "dps": 81,
+            "hit_speed": 1.0,
+            "range": 1.0,
+            "speed_numeric": 90,
+            "speed_class": "fast",
+            "target_type": "ground",
+            "targets_air": false,
+            "targets_ground": true,
+            "splash_radius": 0.0,
+            "projectile_speed": null,
+            "deploy_time": 1.0,
+            "count": 15
+        },
+        "mechanics": {
+            "shield_hp": 0,
+            "death_damage": 0,
+            "charge_damage": 0,
+            "stun_duration": 0.0,
+            "knockback": false,
+            "jumps_river": false
+        },
+        "ai_tags": {
+            "roles": [
+                "swarm",
+                "spell_bait"
+            ],
+            "strengths": [
+                "tank_killer",
+                "distraction"
+            ],
+            "weaknesses": [
+                "splash",
+                "spells"
+            ],
+            "kiting_priority": 1
+        }
+    },
+    "baby_dragon": {
+        "metadata": {
+            "id": 91243007,
+            "name": "Baby Dragon",
+            "rarity": "common",
+            "cost": 4,
+            "type": "troop",
+            "arena": 1,
+            "is_evolution": false,
+            "is_champion": false
+        },
+        "combat": {
+            "hp": 1152,
+            "damage": 160,
+            "dps": 107,
+            "hit_speed": 1.5,
+            "range": 3.5,
+            "speed_numeric": 90,
+            "speed_class": "fast",
+            "target_type": "air_ground",
+            "targets_air": true,
+            "targets_ground": true,
+            "splash_radius": 0.0,
+            "projectile_speed": null,
+            "deploy_time": 1.0,
+            "count": 1
+        },
+        "mechanics": {
+            "shield_hp": 0,
+            "death_damage": 0,
+            "charge_damage": 0,
+            "stun_duration": 0.0,
+            "knockback": false,
+            "jumps_river": false
+        },
+        "ai_tags": {
+            "roles": [
+                "support",
+                "splash",
+                "air"
+            ],
+            "strengths": [
+                "anti_swarm",
+                "air_tank"
+            ],
+            "weaknesses": [
+                "tank_killer",
+                "single_target"
+            ],
+            "kiting_priority": 5
+        }
+    },
+    "fireball": {
+        "metadata": {
+            "id": 1809455,
+            "name": "Fireball",
+            "rarity": "common",
+            "cost": 4,
+            "type": "spell",
+            "arena": 1,
+            "is_evolution": false,
+            "is_champion": false
+        },
+        "combat": {
+            "hp": 0,
+            "damage": 689,
+            "dps": 689,
+            "hit_speed": 1.0,
+            "range": 1.0,
+            "speed_numeric": 60,
+            "speed_class": "medium",
+            "target_type": "any",
+            "targets_air": true,
+            "targets_ground": true,
+            "splash_radius": 2.5,
+            "projectile_speed": null,
+            "deploy_time": 1.0,
+            "count": 1
+        },
+        "mechanics": {
+            "shield_hp": 0,
+            "death_damage": 0,
+            "charge_damage": 0,
+            "stun_duration": 0.0,
+            "knockback": false,
+            "jumps_river": false
+        },
+        "ai_tags": {
+            "roles": [
+                "medium_spell"
+            ],
+            "strengths": [
+                "anti_support",
+                "tower_damage"
+            ],
+            "weaknesses": [],
+            "kiting_priority": 0
+        }
+    },
+    "princess_tower": {
+        "metadata": {
+            "id": 1496739,
+            "name": "Princess Tower",
+            "rarity": "common",
+            "cost": 0,
+            "type": "building",
+            "arena": 1,
+            "is_evolution": false,
+            "is_champion": false
+        },
+        "combat": {
+            "hp": 3052,
+            "damage": 109,
+            "dps": 136,
+            "hit_speed": 0.8,
+            "range": 7.5,
+            "speed_numeric": 60,
+            "speed_class": "medium",
+            "target_type": "air_ground",
+            "targets_air": true,
+            "targets_ground": true,
+            "splash_radius": 0.0,
+            "projectile_speed": null,
+            "deploy_time": 1.0,
+            "count": 1
+        },
+        "mechanics": {
+            "shield_hp": 0,
+            "death_damage": 0,
+            "charge_damage": 0,
+            "stun_duration": 0.0,
+            "knockback": false,
+            "jumps_river": false
+        },
+        "ai_tags": {
+            "roles": [
+                "defensive_building"
+            ],
+            "strengths": [],
+            "weaknesses": [],
+            "kiting_priority": 0
+        }
+    },
+    "king_tower": {
+        "metadata": {
+            "id": 83601544,
+            "name": "King Tower",
+            "rarity": "common",
+            "cost": 0,
+            "type": "building",
+            "arena": 1,
+            "is_evolution": false,
+            "is_champion": false
+        },
+        "combat": {
+            "hp": 4824,
+            "damage": 109,
+            "dps": 109,
+            "hit_speed": 1.0,
+            "range": 7.0,
+            "speed_numeric": 60,
+            "speed_class": "medium",
+            "target_type": "air_ground",
+            "targets_air": true,
+            "targets_ground": true,
+            "splash_radius": 0.0,
+            "projectile_speed": null,
+            "deploy_time": 1.0,
+            "count": 1
+        },
+        "mechanics": {
+            "shield_hp": 0,
+            "death_damage": 0,
+            "charge_damage": 0,
+            "stun_duration": 0.0,
+            "knockback": false,
+            "jumps_river": false
+        },
+        "ai_tags": {
+            "roles": [
+                "defensive_building"
+            ],
+            "strengths": [],
+            "weaknesses": [],
+            "kiting_priority": 0
+        }
+    }
+}
