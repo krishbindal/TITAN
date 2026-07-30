@@ -18,7 +18,10 @@ class Tracker:
 
     def update(self, detections, frame_number):
 
+        from knowledge.card_database import CardDatabase
+
         matched_tracks = set()
+        new_tracks = []
         start_next_id = self.next_id
 
         # Match detections
@@ -26,10 +29,11 @@ class Tracker:
 
             best_track = None
             best_distance = float("inf")
+            detection_norm = CardDatabase.normalize(detection.name)
 
             for track in self.tracks:
 
-                if track.name != detection.name:
+                if CardDatabase.normalize(track.name) != detection_norm:
                     continue
 
                 distance = track.distance_to(detection)
@@ -49,9 +53,10 @@ class Tracker:
 
             else:
 
-                self.tracks.append(Track(self.next_id, detection, frame_number))
-
+                new_tracks.append(Track(self.next_id, detection, frame_number))
                 self.next_id += 1
+
+        self.tracks.extend(new_tracks)
 
         # Mark missed for tracks that were not matched
         for track in self.tracks:

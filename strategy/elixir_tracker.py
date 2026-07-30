@@ -36,6 +36,9 @@ class ElixirTracker:
 
         # Track which enemy track IDs we already counted
         self._known_enemy_ids = set()
+        
+        # Track when we last billed a card type to prevent multi-counting swarms
+        self._last_card_play_times = {}
 
         # Game clock tracking for elixir regen
         self._last_update_time = 0.0
@@ -68,9 +71,18 @@ class ElixirTracker:
         
         if ui_state and hasattr(ui_state, "player_elixir") and ui_state.player_elixir is not None:
             ocr_val = ui_state.player_elixir
-            # Use the HIGHER of OCR and time-estimate to avoid underestimation
-            # (OCR can misread 10 as 0, but time-based can't overshoot past 10)
-            self.player_elixir = max(ocr_val, time_estimate)
+            
+            # Trust OCR if it drops (indicates a play we missed) or if it's within bounds
+            if ocr_val < self.player_elixir - 0.5:
+                # Big drop means card played
+                self.player_elixir = ocr_val
+            elif abs(ocr_val - time_estimate) <= 2.0:
+                # Plausible read, trust it and snap
+                self.player_elixir = ocr_val
+            else:
+                # OCR read is wildly different without a drop (e.g. read 10 when we have 2)
+                # Fall back to time estimate
+                self.player_elixir = time_estimate
         else:
             # OCR failed — use time-based estimate
             self.player_elixir = time_estimate
@@ -91,13 +103,17 @@ class ElixirTracker:
             if troop.track_id in self._known_enemy_ids:
                 continue
 
-            # New enemy troop detected!
             self._known_enemy_ids.add(troop.track_id)
+            
+            # Swarm cooldown: if we just billed this card type recently, ignore the clone
+            card_key = self.card_db.normalize(troop.name)
+            last_played = self._last_card_play_times.get(card_key, -10.0)
+            if game_time - last_played < 2.0:
+                continue
+                
+            self._last_card_play_times[card_key] = game_time
 
-            # Look up its elixir cost
-            card_key = troop.name.replace("enemy_", "")
             card = self.card_db.get(card_key)
-
             if card and card.cost:
                 self.opponent_elixir = max(0.0, self.opponent_elixir - card.cost)
 

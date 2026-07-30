@@ -80,14 +80,14 @@ class ScreenClassifier:
         if self._is_gameplay_explicit(hsv):
             return ScreenState.GAMEPLAY
 
-        if self._is_home_screen(hsv):
-            return ScreenState.HOME_SCREEN
-
         if self._is_victory(hsv):
             return ScreenState.VICTORY
 
         if self._is_defeat(hsv):
             return ScreenState.DEFEAT
+
+        if self._is_home_screen(hsv):
+            return ScreenState.HOME_SCREEN
             
         return ScreenState.UNKNOWN
 

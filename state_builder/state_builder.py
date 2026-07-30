@@ -18,24 +18,9 @@ class StateBuilder:
 
             # If it's a card in our hand at the bottom of the screen
             if track.name.startswith("card_"):
-                # Clean up name (e.g. "card_valk" -> "valkyrie")
-                clean_name = track.name.replace("card_", "")
-
-                # Manual fixes for naming inconsistencies between dataset and counter_matrix
-                if clean_name == "valk":
-                    clean_name = "valkyrie"
-                if clean_name == "barb":
-                    clean_name = "barbarians"
-                if clean_name == "bats":
-                    clean_name = "bats"
-                if clean_name == "elctro_wizard":
-                    clean_name = "electro_wizard"
-                if clean_name == "peka":
-                    clean_name = "pekka"
-                if clean_name == "phenix":
-                    clean_name = "phoenix"
-                if clean_name == "gaint":
-                    clean_name = "giant"
+                # Clean up name using CardDatabase normalization
+                from knowledge.card_database import CardDatabase
+                clean_name = CardDatabase.normalize(track.name)
 
                 # Determine slot index (0 to 3) based on X coordinate (assuming screen width 720)
                 if x < 290:

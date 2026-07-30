@@ -154,3 +154,17 @@ class AsyncEngine:
             else:
                 # No frame to process, sleep briefly to avoid busy-waiting
                 time.sleep(0.005)
+
+    def reset_pipeline(self):
+        """Thread-safe reset for the pipeline state (called when match ends)."""
+        with self._lock:
+            self.pipeline.reset()
+            self._latest_game_state = None
+            self._latest_action = None
+            self._latest_suggestion = None
+
+    def notify_card_played(self, card_name):
+        """Thread-safe deduction of elixir for manual/bot plays."""
+        with self._lock:
+            if hasattr(self.pipeline, 'strategy') and hasattr(self.pipeline.strategy, 'elixir'):
+                self.pipeline.strategy.elixir.deduct_card_play(card_name)

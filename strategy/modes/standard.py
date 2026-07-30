@@ -51,7 +51,7 @@ def calculate_action_scores(game_state, threat, elixir, memory, placement):
     report = threat.assess(game_state)
     
     # Extract Memory Analytics
-    elixir_adv = memory.get_elixir_advantage(current_elixir)
+    elixir_adv = elixir.get_elixir_advantage()
     enemy_win_con_ready = memory.has_win_condition_in_cycle()
     
     win_cons = set(_deck_config.get("win_conditions", []))
@@ -63,7 +63,7 @@ def calculate_action_scores(game_state, threat, elixir, memory, placement):
     wait_score = 10.0  # Base wait score
     
     # Predictive Defense: Enemy has high elixir and a win-con ready
-    if enemy_win_con_ready and memory.enemy_elixir >= 6.0:
+    if enemy_win_con_ready and elixir.opponent_elixir >= 6.0:
         wait_score += 50.0  
         
     # Prevent leaking elixir

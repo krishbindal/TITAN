@@ -98,6 +98,13 @@ class PlacementEngine:
         if not card_to_play:
             return None, None
 
+        # 1. Offensive Push (No immediate pressure)
+        if not threat_report.pressure or not threat_report.top_threat:
+            return self._calculate_offensive_drop(card_to_play, threat_report, game_state)
+
+        # 2. Defensive Placement (Under pressure)
+        target = threat_report.top_threat
+        
         # --- Spatial Grid & Centroid Calculation ---
         # Instead of just looking at the top threat, we find the "center of mass" of the push
         push_x = 0
@@ -118,14 +125,7 @@ class PlacementEngine:
             centroid_y = int(push_y / push_count)
         else:
             # Fallback if no enemies on hot lane
-            centroid_x, centroid_y = (180 if threat_report.hot_lane == "left" else 540), 750
-
-        # 1. Offensive Push (No immediate pressure)
-        if not threat_report.pressure or not threat_report.top_threat:
-            return self._calculate_offensive_drop(card_to_play, threat_report, game_state)
-
-        # 2. Defensive Placement (Under pressure)
-        target = threat_report.top_threat
+            centroid_x, centroid_y = (180 if threat_report.hot_lane != "right" else 540), 750
         
         # --- Kinematic Leading ---
         # Lead the target based on its speed
@@ -210,8 +210,8 @@ class PlacementEngine:
 
     def _calculate_offensive_drop(self, card, report, game_state):
         """Determine where to drop a card when pushing."""
-        # Determine which lane we are pushing
-        push_x = 180 if report.hot_lane == "left" else 540
+        # Determine which lane we are pushing (default to left if balanced)
+        push_x = 180 if report.hot_lane != "right" else 540
 
         if card in self.win_conditions:
             if card in ["goblin_barrel", "miner"]:
@@ -223,15 +223,14 @@ class PlacementEngine:
                 return push_x, self.bridge_y
 
         # If we have an allied tank pushing, stack support behind it
-        if card in self.ranged or card in (self.tanks - {card}):
-            allied_tank = self._find_allied_tank(game_state)
-            if allied_tank and allied_tank.y < 900:  # Tank is in our half or crossing
-                # Place support troop BEHIND the tank (higher Y = further back)
-                return int(allied_tank.x), int(allied_tank.y + 120)
+        allied_tank = self._find_allied_tank(game_state)
+        if card in self.ranged and allied_tank and allied_tank.y < 900:  # Tank is in our half or crossing
+            # Place support troop BEHIND the tank (higher Y = further back)
+            return int(allied_tank.x), int(allied_tank.y + 120)
 
         if card in self.tanks:
             # Drop tanks in the back (behind king tower) to build a push
-            back_y = 1100
+            back_y = 800
             return push_x, back_y
 
         # Default offensive placement (support troops)

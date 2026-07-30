@@ -23,7 +23,7 @@ def decide(game_state, threat, elixir, memory, placement):
             tx, ty = placement.calculate_drop(counter_card, report, game_state)
             return ActionCommand(
                 Action.PLAY_CARD, card_to_play=counter_card, target_x=tx, target_y=ty
-            )
+            ), "Defending top threat"
 
     # Aggressive: play cards as soon as we have enough elixir
     if elixir.player_elixir >= 4 and len(game_state.hand) > 0:
@@ -62,6 +62,6 @@ def decide(game_state, threat, elixir, memory, placement):
             card_to_play=card_to_play,
             target_x=target_x,
             target_y=target_y,
-        )
+        ), f"Sudden death push: {card_to_play}"
 
-    return ActionCommand(Action.WAIT)
+    return ActionCommand(Action.WAIT), "Waiting for elixir"

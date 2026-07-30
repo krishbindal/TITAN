@@ -192,7 +192,7 @@ def run_play_mode(adb, pipeline, visualizer, navigator, deck_builder):
                                 adb.play_card(card_idx, action.target_x, action.target_y)
                                 if match_logger:
                                     match_logger.record_action()
-                                pipeline.pipeline.strategy.elixir.deduct_card_play(action.card_to_play)
+                                pipeline.notify_card_played(action.card_to_play)
                                 
                         # Mark this result as processed regardless of whether it was PLAY_CARD or WAIT
                         last_processed_result_id = result_id
@@ -202,9 +202,9 @@ def run_play_mode(adb, pipeline, visualizer, navigator, deck_builder):
                     logger.info(f"Match Concluded. Result: {'VICTORY' if won else 'DEFEAT'}")
                     
                     if won:
-                        pipeline.pipeline.reset()
+                        pipeline.reset_pipeline()
                     else:
-                        pipeline.pipeline.reset()
+                        pipeline.reset_pipeline()
                     
                     if match_logger:
                         match_logger.end_match(won=won)

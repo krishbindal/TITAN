@@ -21,6 +21,9 @@ class EnemyTracker:
         # We track which specific YOLO detection IDs we've already counted
         # so we don't count the same spawned troop twice.
         self._counted_track_ids = set()
+        
+        # Track when we last billed a card type to prevent multi-counting swarms
+        self._last_card_play_times = {}
 
     def update(self, game_state, game_time=0.0):
         """Update memory based on the current battlefield."""
@@ -34,7 +37,14 @@ class EnemyTracker:
 
             # New enemy card detected!
             self._counted_track_ids.add(troop.track_id)
-            card_key = troop.name.replace("enemy_", "")
+            card_key = self.card_db.normalize(troop.name)
+            
+            # Swarm cooldown: if we just logged this card type recently, ignore the clone
+            last_played = self._last_card_play_times.get(card_key, -10.0)
+            if game_time - last_played < 2.0:
+                continue
+                
+            self._last_card_play_times[card_key] = game_time
 
             # Add to discovered deck
             if len(self.deck) < 8:
@@ -83,6 +93,7 @@ class EnemyTracker:
         self.deck.clear()
         self.play_history.clear()
         self._counted_track_ids.clear()
+        self._last_card_play_times.clear()
 
     def __str__(self):
         deck_str = ", ".join(self.deck) if self.deck else "Unknown"

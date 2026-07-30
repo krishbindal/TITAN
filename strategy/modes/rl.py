@@ -16,14 +16,15 @@ def pick_best_counter(hand, top_threat_name):
     if not top_threat_name:
         return random.choice(hand)
         
-    threat_lower = top_threat_name.lower().replace("enemy_", "")
+    from knowledge.card_database import CardDatabase
+    threat_lower = CardDatabase.normalize(top_threat_name)
     
-    # Define hard counters
+    # Define hard counters using canonical names
     synergy_matrix = {
         # Swarms
-        "skeleton_army": ["log", "arrows", "valk", "baby_dragon", "wizard", "zap"],
-        "goblin_barrel": ["log", "arrows", "valk", "zap"],
-        "minion_horde": ["arrows", "wizard", "baby_dragon", "fireball"],
+        "skeleton_army": ["log", "arrows", "valkyrie", "baby_dragon", "wizard", "zap"],
+        "goblin_barrel": ["log", "arrows", "valkyrie", "zap"],
+        "minions": ["arrows", "wizard", "baby_dragon", "fireball"],
         # Tanks
         "giant": ["skeleton_army", "mini_pekka", "goblin_cage", "inferno_dragon", "tesla", "pekka"],
         "golem": ["skeleton_army", "mini_pekka", "goblin_cage", "inferno_dragon", "tesla", "pekka"],
@@ -32,9 +33,9 @@ def pick_best_counter(hand, top_threat_name):
         "balloon": ["musketeer", "wizard", "tesla", "inferno_dragon", "archers"],
         "baby_dragon": ["musketeer", "wizard", "tesla"],
         # Glass cannons
-        "musketeer": ["valk", "mini_pekka", "fireball", "knight"],
-        "wizard": ["valk", "mini_pekka", "fireball", "knight"],
-        "witch": ["valk", "baby_dragon", "log", "fireball", "knight"]
+        "musketeer": ["valkyrie", "mini_pekka", "fireball", "knight"],
+        "wizard": ["valkyrie", "mini_pekka", "fireball", "knight"],
+        "witch": ["valkyrie", "baby_dragon", "log", "fireball", "knight"]
     }
     
     # If we have a specific counter strategy for this threat

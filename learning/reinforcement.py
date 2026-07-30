@@ -1,6 +1,7 @@
 import random
 import json
 import os
+import ast
 from learning.vector_state import StateVectorizer
 
 class QLearningAgent:
@@ -52,7 +53,7 @@ class QLearningAgent:
         # Elixir Advantage
         adv_state = "NEUTRAL"
         if memory:
-            adv = memory.get_elixir_advantage(elixir_tracker.player_elixir)
+            adv = elixir_tracker.get_elixir_advantage()
             if adv > 2.0:
                 adv_state = "ADVANTAGE"
             elif adv < -2.0:
@@ -106,7 +107,6 @@ class QLearningAgent:
                 self.q_table = {}
                 for k_str, v in serializable_table.items():
                     try:
-                        import ast
                         # Safely parse the string back into a tuple
                         k_tuple = ast.literal_eval(k_str)
                         self.q_table[k_tuple] = v
