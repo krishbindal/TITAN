@@ -24,7 +24,7 @@ AUTO_LABEL_CONFIDENCE = 0.75
 
 # === Paths ===
 DECK_CONFIG_PATH = "configs/deck.json"
-VIDEO_SOURCE_DIR = "C:/Users/krish/Music/clash royale"
+VIDEO_SOURCE_DIR = "data/videos"
 EXTRACTED_FRAMES_DIR = "data/extracted"
 AUTO_LABELED_DIR = "data/auto_labeled"
 

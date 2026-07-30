@@ -59,7 +59,7 @@ def run_server():
     print("[Dashboard] Starting web dashboard at http://127.0.0.1:5000 (Waitress WSGI)")
     from waitress import serve
 
-    serve(app, host="0.0.0.0", port=5000, threads=4)
+    serve(app, host="127.0.0.1", port=5000, threads=4)
 
 
 def start_dashboard(frame_callback, telemetry_callback):

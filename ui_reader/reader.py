@@ -59,8 +59,7 @@ class UIReader:
                     # No pink found -> 0 elixir
                     state.player_elixir = 0.0
         except Exception as e:
-            # Silently fail, it will fall back to time-based
-            pass
+            print(f"[UIReader] Error reading elixir: {e}")
 
         # Phase 6: Throttled Tower HP OCR
         current_time = time.time()
@@ -87,8 +86,8 @@ class UIReader:
                 r_text = pytesseract.image_to_string(right_thresh, config=config).strip()
                 if r_text and r_text.isdigit():
                     self.cached_right_hp = int(r_text)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[UIReader] Error reading tower HP: {e}")
                 
         state.enemy_left_tower_hp = self.cached_left_hp
         state.enemy_right_tower_hp = self.cached_right_hp

@@ -75,3 +75,13 @@ The vision model was trained from scratch using a highly optimized data engineer
 
 ## 👨‍💻 Author
 Built by a passionate AI engineer to explore the limits of computer vision, real-time asynchronous processing, and expert-system game theory.
+
+---
+
+## 🚧 Current WIP Status
+
+Please note that several modules are currently empty stubs or works-in-progress, and will be completed in a future release:
+- **`learning/`**: Contains infrastructure for deep reinforcement learning (e.g., `vector_state.py`) but RL training itself is not currently active (the system uses the `Grandmaster` rule-based engine instead).
+- **`vision/yolo_model.py`**: The YOLO object detection stub needs to be connected to the real model weights.
+- **`engine/mock_state.py`**: Currently a stub used for offline testing.
+- **`tests/`**: Unit tests are currently empty stubs.

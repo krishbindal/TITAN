@@ -1,10 +1,10 @@
 import random
-import pickle
+import json
 import os
 from learning.vector_state import StateVectorizer
 
 class QLearningAgent:
-    def __init__(self, actions, alpha=0.1, gamma=0.9, epsilon=0.1, model_path="models/q_table.pkl"):
+    def __init__(self, actions, alpha=0.1, gamma=0.9, epsilon=0.1, model_path="models/q_table.json"):
         self.q_table = {}
         self.actions = actions
         self.alpha = alpha
@@ -93,10 +93,22 @@ class QLearningAgent:
 
     def save(self):
         os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
-        with open(self.model_path, 'wb') as f:
-            pickle.dump(self.q_table, f)
+        # Convert tuple keys to strings for JSON serialization
+        serializable_table = {str(k): v for k, v in self.q_table.items()}
+        with open(self.model_path, 'w') as f:
+            json.dump(serializable_table, f)
 
     def load(self):
         if os.path.exists(self.model_path):
-            with open(self.model_path, 'rb') as f:
-                self.q_table = pickle.load(f)
+            with open(self.model_path, 'r') as f:
+                serializable_table = json.load(f)
+                # Reconstruct tuple keys from string (e.g. "(('MED', 'SAFE', ...), 'WAIT')")
+                self.q_table = {}
+                for k_str, v in serializable_table.items():
+                    try:
+                        import ast
+                        # Safely parse the string back into a tuple
+                        k_tuple = ast.literal_eval(k_str)
+                        self.q_table[k_tuple] = v
+                    except Exception:
+                        print(f"Warning: could not parse q-table key {k_str}")

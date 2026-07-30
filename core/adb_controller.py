@@ -108,8 +108,8 @@ class ADBController:
                 capture_output=True,
                 check=False,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[ADB] Tap failed at ({x}, {y}): {e}")
 
     def swipe(self, x1, y1, x2, y2, duration_ms=200):
         """
@@ -133,8 +133,8 @@ class ADBController:
                 capture_output=True,
                 check=False,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[ADB] Swipe failed from ({x1}, {y1}) to ({x2}, {y2}): {e}")
 
     def play_card(self, card_index, target_x, target_y):
         """

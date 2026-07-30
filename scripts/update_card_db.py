@@ -2,6 +2,7 @@ import json
 import yaml
 import os
 import sys
+import hashlib
 
 # Add project root to path for imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -70,7 +71,7 @@ def build_database():
         # Build Pydantic model dictionary
         card_dict = {
             "metadata": {
-                "id": hash(card_key) % 100000000,  # Dummy ID
+                "id": int(hashlib.md5(card_key.encode('utf-8')).hexdigest()[:8], 16),  # Deterministic ID
                 "name": data.get("name", card_key),
                 "rarity": "common",  # Placeholder
                 "cost": data.get("cost", 0),

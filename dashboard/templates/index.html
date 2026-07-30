@@ -377,7 +377,14 @@
             const time = new Date().toLocaleTimeString('en-US', { hour12: false });
             const line = document.createElement('div');
             line.className = 'log-entry';
-            line.innerHTML = `<span class="time">[${time}]</span><span class="msg">${msg}</span>`;
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'time';
+            timeSpan.textContent = `[${time}]`;
+            const msgSpan = document.createElement('span');
+            msgSpan.className = 'msg';
+            msgSpan.textContent = msg;
+            line.appendChild(timeSpan);
+            line.appendChild(msgSpan);
             
             logBox.appendChild(line);
             logBox.scrollTop = logBox.scrollHeight;
