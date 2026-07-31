@@ -7,7 +7,7 @@ class PlacementEngine:
         # Base screen dimensions
         self.center_x = 360
         self.center_y = 640
-        self.bridge_y = 550
+        self.bridge_y = 700
         self.center_pull_y = 750
 
         # Card categories for placement logic
@@ -93,8 +93,26 @@ class PlacementEngine:
 
     def calculate_drop(self, card_to_play, threat_report, game_state):
         """
-        Calculate optimal (x, y) coordinates to drop the card.
+        Calculate optimal (x, y) coordinates to drop the card, with human-like jitter.
         """
+        x, y = self._calculate_drop_internal(card_to_play, threat_report, game_state)
+        
+        if x is None or y is None:
+            return None, None
+            
+        import random
+        # Add human jitter so it never taps the exact same pixel
+        # Standard deviation of 15 pixels
+        jitter_x = random.randint(-15, 15)
+        jitter_y = random.randint(-15, 15)
+        
+        final_x = max(20, min(700, x + jitter_x))
+        final_y = max(100, min(1200, y + jitter_y))
+        
+        return final_x, final_y
+
+    def _calculate_drop_internal(self, card_to_play, threat_report, game_state):
+        """Internal logic for calculating exact coordinates."""
         if not card_to_play:
             return None, None
 
@@ -201,7 +219,17 @@ class PlacementEngine:
                 return int(safe_x), int(target.y + 50)
 
         if card_to_play in self.swarms:
-            # Swarms surround the target, drop exactly on centroid for max DPS
+            # Splash units will destroy swarms instantly if dropped in front
+            # We must SURROUND them by dropping exactly on their coordinate
+            splash_units = {"wizard", "valkyrie", "executioner", "bomber", 
+                            "dark_prince", "baby_dragon", "bowler", "firecracker", "sparky"}
+            
+            enemy_name = target.name.replace("enemy_", "")
+            if enemy_name in splash_units:
+                # Drop exactly on top to surround
+                return int(target.x), int(target.y)
+                
+            # For non-splash pushes, drop on centroid for max DPS
             return centroid_x, centroid_y
 
         # Default for Melee / Mini-tanks (Valkyrie, Knight, Mini PEKKA, etc.)

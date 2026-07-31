@@ -230,7 +230,17 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
     # Enemy troops in danger zone — MUST counter immediately
     # ═══════════════════════════════════════════════════════
     if report.pressure and report.top_threat:
-        enemy_key = report.top_threat.name.replace("enemy_", "")
+        # SACRIFICE PROTOCOL: If tower is doomed, ignore and save elixir for opposite lane push
+        if ui_state and hasattr(ui_state, 'our_left_tower_hp') and hasattr(ui_state, 'our_right_tower_hp'):
+            left_doomed = report.hot_lane == "left" and ui_state.our_left_tower_hp and ui_state.our_left_tower_hp < 400
+            right_doomed = report.hot_lane == "right" and ui_state.our_right_tower_hp and ui_state.our_right_tower_hp < 400
+            
+            # If doomed and heavy push (> 8 elixir push), sacrifice it
+            if (left_doomed or right_doomed) and report.enemy_count >= 3:
+                report.pressure = False
+                
+        if report.pressure: # Only defend if not sacrificed
+            enemy_key = report.top_threat.name.replace("enemy_", "")
         
         # Try ALL counters in order, not just the best one
         from knowledge.counter_matrix import get_counters
@@ -318,7 +328,7 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                 # Rush OPPOSITE lane from where enemy committed
                 opposite = get_opposite_lane(report.hot_lane)
                 push_x = 180 if opposite == "left" else 540
-                bridge_y = 550
+                bridge_y = 700
                 
                 _last_action_time = current_time
                 return ActionCommand(
@@ -431,6 +441,33 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                         target_x=tx, target_y=ty
                     ), f"🔰 Pre-defend: {counter} vs {enemy_key} (trade: {trade_value:+.0f})"
     
+    # ═══════════════════════════════════════════════════════
+    # PRIORITY 6.2: PREDICTIVE SPELL
+    # If we have a win condition attacking and enemy has swarms in cycle
+    # ═══════════════════════════════════════════════════════
+    allied_win_con = None
+    for troop in game_state.troops:
+        if troop.team == "ally":
+            key = troop.name.replace("ally_", "")
+            if key in WIN_CONDITIONS and troop.y < 700:
+                allied_win_con = troop
+                break
+                
+    if allied_win_con and current_elixir >= 2:
+        swarm_in_cycle = any(c in SWARMS and memory.is_in_cycle(c) for c in memory.deck)
+        if swarm_in_cycle:
+            for c in hand:
+                if c in {"log", "zap", "snowball", "arrows"} and c != reserved_card:
+                    afford, _ = can_afford(c, current_elixir)
+                    if afford:
+                        _last_action_time = current_time
+                        tx = int(allied_win_con.x)
+                        ty = max(250, int(allied_win_con.y - 150))
+                        return ActionCommand(
+                            Action.PLAY_CARD, card_to_play=c,
+                            target_x=tx, target_y=ty
+                        ), f"🔮 PREDICTION: {c} supporting {allied_win_con.name.replace('ally_', '')}"
+
     # ═══════════════════════════════════════════════════════
     # PRIORITY 6.5: SUPPORT EXISTING PUSH
     # If we have allied troops crossing the bridge, stack support behind them

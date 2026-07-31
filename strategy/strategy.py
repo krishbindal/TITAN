@@ -86,7 +86,53 @@ class Strategy:
         else:
             action_cmd, suggestion = result
             all_scores = []
+
+        # Intercept action for human-like delay (Anti-Bot)
+        import random
+        current_time = time.time()
+        
+        # Check if we have a queued action
+        is_queued = hasattr(self, '_queued_action') and self._queued_action is not None
+        
+        # If strategy wants to WAIT, cancel any non-emergency queued action
+        if action_cmd.action == Action.WAIT:
+            if is_queued and "EMERGENCY" not in suggestion:
+                self._queued_action = None
             
+            # If we are STILL queued (emergency), check if it's time
+            if hasattr(self, '_queued_action') and self._queued_action is not None:
+                if current_time >= self._queued_time:
+                    action_cmd = self._queued_action
+                    self._queued_action = None
+                    suggestion = f"✅ Executing queued emergency"
+                else:
+                    suggestion = f"🤔 Hovering... ({self._queued_action.card_to_play})"
+                    
+        else: # Strategy wants to do something
+            # If no queue, or the strategy changed its mind to a NEW action
+            if not is_queued or self._queued_action.card_to_play != action_cmd.card_to_play:
+                if "EMERGENCY" in suggestion:
+                    delay = random.uniform(0.3, 0.5)
+                elif "PUSH" in suggestion or "COMBO" in suggestion:
+                    delay = random.uniform(0.8, 1.2)
+                else:
+                    delay = random.uniform(0.5, 0.8)
+                    
+                self._queued_action = action_cmd
+                self._queued_time = current_time + delay
+                
+                action_cmd = ActionCommand(Action.WAIT)
+                suggestion = f"🤔 Thinking... (Will play {self._queued_action.card_to_play} in {delay:.1f}s)"
+            else:
+                # We are queued and strategy still wants to do the same thing
+                if current_time < self._queued_time:
+                    action_cmd = ActionCommand(Action.WAIT)
+                    suggestion = f"🤔 Hovering... ({self._queued_action.card_to_play})"
+                else:
+                    action_cmd = self._queued_action
+                    self._queued_action = None
+                    suggestion = f"✅ Executing: {suggestion}"
+                    
         # Decision Logging
         if hasattr(self, 'logger') and self.logger:
             self.logger.log(

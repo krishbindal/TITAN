@@ -69,8 +69,10 @@ class UINavigator:
                     
         if best_c is not None:
             x, y, w, h = cv2.boundingRect(best_c)
-            center_x = int(x + w/2) + 100
-            center_y = int(y + h/2) + 700
+            center_x = 360
+            # Y=930 is the dead center of the big yellow Battle button on a 720x1280 screen.
+            # Using the contour's Y-center can sometimes be skewed by the brown border.
+            center_y = 930
             return (center_x, center_y)
             
         return None

@@ -96,11 +96,11 @@ class ScreenClassifier:
         
     def _is_gameplay_explicit(self, hsv):
         # Gameplay always has the bright pink elixir bar at the very bottom
-        # Elixir bar is roughly at Y=1210-1250, X=150-550
-        roi = hsv[1210:1250, 150:550]
-        # Pink/Magenta color range in OpenCV HSV
-        pink_ratio = self._color_ratio(roi, [140, 100, 100], [170, 255, 255])
-        return pink_ratio > 0.05
+        # Expanded ROI to account for different emulator aspect ratios/bars
+        roi = hsv[1150:1280, 100:620]
+        # Pink/Magenta color range in OpenCV HSV (matches reader.py)
+        pink_ratio = self._color_ratio(roi, [135, 100, 150], [170, 255, 255])
+        return pink_ratio > 0.01
 
     def _color_ratio(self, hsv_roi, lower, upper):
         mask = cv2.inRange(hsv_roi, np.array(lower), np.array(upper))

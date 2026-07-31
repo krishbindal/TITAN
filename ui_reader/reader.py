@@ -46,7 +46,7 @@ class UIReader:
                 # Find the rightmost pink pixel
                 coords = cv2.findNonZero(mask)
                 if coords is not None:
-                    max_x = np.max(coords[:, :, 0])
+                    max_x = np.max(coords[..., 0])
                     # Total possible width of the elixir bar crop
                     total_width = crop.shape[1]
                     
