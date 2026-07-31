@@ -230,7 +230,7 @@ class PlacementEngine:
 
         if card in self.tanks:
             # Drop tanks in the back (behind king tower) to build a push
-            back_y = 800
+            back_y = 1050
             return push_x, back_y
 
         # Default offensive placement (support troops)

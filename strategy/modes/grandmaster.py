@@ -144,15 +144,17 @@ def detect_punish_window(memory, elixir_tracker):
     Check if the enemy just spent a lot of elixir (heavy card)
     and we have an elixir advantage >= 4 for a punish play.
     """
-    if not memory.play_history:
+    if len(memory.play_history) < 2:
         return False
     
-    last_played = memory.play_history[-1]
-    last_cost = get_card_cost(last_played)
-    advantage = elixir_tracker.get_elixir_advantage()
-    
-    # If they just dropped an expensive card and we have elixir advantage
-    return last_cost >= 5 and advantage >= 3
+    # Check the last 3 cards played for an expensive one
+    recent = memory.play_history[-3:]
+    for card in recent:
+        cost = get_card_cost(card)
+        if cost >= 5:
+            advantage = elixir_tracker.get_elixir_advantage()
+            return advantage >= 3
+    return False
 
 
 def get_game_phase(game_time):
@@ -230,10 +232,12 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
     if report.pressure and report.top_threat:
         enemy_key = report.top_threat.name.replace("enemy_", "")
         
-        # Find the best affordable counter
-        counter = best_counter(enemy_key, hand)
-        
-        if counter:
+        # Try ALL counters in order, not just the best one
+        from knowledge.counter_matrix import get_counters
+        for counter in get_counters(enemy_key):
+            if counter not in hand:
+                continue
+            
             # Evaluate the trade — don't use PEKKA (7) to kill Skeletons (1)
             trade_value = evaluate_trade(counter, enemy_key)
             
@@ -337,16 +341,28 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
             # Find enemy troops in a cluster (within spell radius)
             enemy_troops = [t for t in game_state.troops if t.team == "enemy"]
             if len(enemy_troops) >= 2:
-                value, targets = evaluate_spell_value(card, enemy_troops)
-                if value >= spell_cost:
-                    # Positive trade — fire the spell at the cluster centroid
-                    cx = sum(t.x for t in enemy_troops) / len(enemy_troops)
-                    cy = sum(t.y for t in enemy_troops) / len(enemy_troops)
-                    _last_action_time = current_time
-                    return ActionCommand(
-                        Action.PLAY_CARD, card_to_play=card,
-                        target_x=int(cx), target_y=int(cy)
-                    ), f"🎯 SPELL VALUE: {card} on {targets} troops ({value:.0f} elixir value)"
+                # Find the tightest cluster of enemies within spell radius (~200px)
+                SPELL_RADIUS = 200
+                best_cluster = []
+                best_cx, best_cy = 0, 0
+                for anchor in enemy_troops:
+                    cluster = [t for t in enemy_troops 
+                              if abs(t.x - anchor.x) < SPELL_RADIUS 
+                              and abs(t.y - anchor.y) < SPELL_RADIUS]
+                    if len(cluster) > len(best_cluster):
+                        best_cluster = cluster
+                        best_cx = sum(t.x for t in cluster) / len(cluster)
+                        best_cy = sum(t.y for t in cluster) / len(cluster)
+                
+                if len(best_cluster) >= 2:
+                    value, targets = evaluate_spell_value(card, best_cluster)
+                    if value >= spell_cost:
+                        cx, cy = int(best_cx), int(best_cy)
+                        _last_action_time = current_time
+                        return ActionCommand(
+                            Action.PLAY_CARD, card_to_play=card,
+                            target_x=cx, target_y=cy
+                        ), f"🎯 SPELL VALUE: {card} on {targets} troops ({value:.0f} elixir value)"
                     
     # ═══════════════════════════════════════════════════════
     # PRIORITY 4.5: CYCLE-AWARE AGGRESSION
@@ -382,8 +398,9 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
             
             # Only combo if we can afford the tank AND have enough left for defense
             if current_elixir >= tank_cost + 3:  # +3 buffer for emergency defense
-                # Play tank in the back to start a push
-                push_x = 180 if report.hot_lane != "right" else 540
+                # Push OPPOSITE lane from where enemy is strongest
+                opposite = get_opposite_lane(report.hot_lane)
+                push_x = 180 if opposite == "left" else 540
                 back_y = 1100  # Behind king tower
                 
                 _last_action_time = current_time
@@ -415,6 +432,24 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                     ), f"🔰 Pre-defend: {counter} vs {enemy_key} (trade: {trade_value:+.0f})"
     
     # ═══════════════════════════════════════════════════════
+    # PRIORITY 6.5: SUPPORT EXISTING PUSH
+    # If we have allied troops crossing the bridge, stack support behind them
+    # ═══════════════════════════════════════════════════════
+    allied_tank = placement._find_allied_tank(game_state)
+    if allied_tank and allied_tank.y < 700 and current_elixir >= 4:  # Tank is past bridge
+        for c in hand:
+            if c in SUPPORT and c != reserved_card:
+                afford, _ = can_afford(c, current_elixir)
+                if afford:
+                    tx = int(allied_tank.x)
+                    ty = int(allied_tank.y + 120)
+                    _last_action_time = current_time
+                    return ActionCommand(
+                        Action.PLAY_CARD, card_to_play=c,
+                        target_x=tx, target_y=ty
+                    ), f"🏗️ SUPPORT: {c} behind {allied_tank.name.replace('ally_', '')}"
+    
+    # ═══════════════════════════════════════════════════════
     # PRIORITY 7: ELIXIR OVERFLOW PREVENTION
     # At 9+ elixir, play SOMETHING to avoid leaking
     # ═══════════════════════════════════════════════════════
@@ -431,11 +466,11 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                         target_x=push_x, target_y=1100
                     ), f"💧 Overflow: {c} in the back (avoiding leak)"
         
-        # No tank? Play cheapest card
+        # No tank? Play cheapest card (ignore reservation at 10 elixir to prevent leak)
         cheapest_available = None
         cheap_cost = 99
         for c in hand:
-            if c != reserved_card:
+            if c != reserved_card or current_elixir >= 10.0:
                 cost = get_card_cost(c)
                 if cost < cheap_cost:
                     cheap_cost = cost

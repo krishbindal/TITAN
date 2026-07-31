@@ -59,18 +59,23 @@ class Strategy:
         Analyze the battlefield and delegate to the active mode.
         """
         # Update subsystems
+        # Activate double elixir at 2 minutes into the match
+        if game_time >= 120.0 and not self.elixir._double_elixir:
+            self.elixir.set_double_elixir(True)
+            print("[Strategy] Double Elixir activated!")
+
         self.elixir.update(game_state, ui_state, game_time)
         self.memory.update(game_state, game_time)
 
         # Delegate to active mode
         if hasattr(self._mode, 'decide'):
-            try:
-                # Try passing all args including game_time and ui_state (for grandmaster)
+            import inspect
+            sig = inspect.signature(self._mode.decide)
+            if 'game_time' in sig.parameters:
                 result = self._mode.decide(
                     game_state, self.threat, self.elixir, self.memory, self.placement, game_time=game_time, ui_state=ui_state
                 )
-            except TypeError:
-                # Fallback for standard mode
+            else:
                 result = self._mode.decide(
                     game_state, self.threat, self.elixir, self.memory, self.placement
                 )

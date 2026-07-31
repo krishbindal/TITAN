@@ -15,6 +15,7 @@ class UIReader:
         self.hp_check_interval = 1.0  # seconds between OCR reads
         self.cached_left_hp = None
         self.cached_right_hp = None
+        self.tesseract_available = True
 
     def read(self, frame):
         """
@@ -63,7 +64,7 @@ class UIReader:
 
         # Phase 6: Throttled Tower HP OCR
         current_time = time.time()
-        if current_time - self.last_hp_check > self.hp_check_interval:
+        if self.tesseract_available and (current_time - self.last_hp_check > self.hp_check_interval):
             self.last_hp_check = current_time
             try:
                 # Approximate bounding boxes for enemy princess towers
@@ -86,6 +87,9 @@ class UIReader:
                 r_text = pytesseract.image_to_string(right_thresh, config=config).strip()
                 if r_text and r_text.isdigit():
                     self.cached_right_hp = int(r_text)
+            except pytesseract.TesseractNotFoundError:
+                print("[UIReader] Tesseract OCR not found. Disabling Tower HP checks.")
+                self.tesseract_available = False
             except Exception as e:
                 print(f"[UIReader] Error reading tower HP: {e}")
                 
