@@ -18,20 +18,17 @@ Key Principles:
   - HOLD spells for maximum value (don't Fireball 1 unit)
 """
 
-import time
 import random
 from strategy.actions import Action, ActionCommand
 from knowledge.counter_matrix import best_counter
 from knowledge.card_database import CardDatabase
 
 _card_db = CardDatabase()
-_last_action_time = 0
-_MIN_ACTION_DELAY = 1.5  # seconds between plays
+# Action timing is handled by strategy.py's anti-bot queue system
 
 def reset():
     """Reset the grandmaster state for a new match."""
-    global _last_action_time
-    _last_action_time = 0
+    pass  # Stateless module — nothing to reset
 
 # ─── Card Role Classification ───
 SPELLS = {"log", "zap", "fireball", "arrows", "poison", "rocket", 
@@ -187,27 +184,12 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
     Grandmaster-level decision engine.
     Evaluates every situation and picks the optimal play.
     """
-    global _last_action_time
-    
-    current_time = time.time()
     hand = game_state.hand
     
     if not hand:
         return ActionCommand(Action.WAIT), "No cards in hand"
     
     phase = get_game_phase(game_time)
-    
-    # Phase adjustments
-    if phase == "double_elixir":
-        min_action_delay = 1.0  # Faster plays in double elixir
-    elif phase == "overtime":
-        min_action_delay = 0.5  # All-in mode
-    else:
-        min_action_delay = 1.5
-
-    # Throttle actions — don't spam faster than the game can handle
-    if current_time - _last_action_time < min_action_delay:
-        return ActionCommand(Action.WAIT), "Action cooldown"
     
     current_elixir = elixir.player_elixir
     report = threat.assess(game_state)
@@ -230,17 +212,7 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
     # Enemy troops in danger zone — MUST counter immediately
     # ═══════════════════════════════════════════════════════
     if report.pressure and report.top_threat:
-        # SACRIFICE PROTOCOL: If tower is doomed, ignore and save elixir for opposite lane push
-        if ui_state and hasattr(ui_state, 'our_left_tower_hp') and hasattr(ui_state, 'our_right_tower_hp'):
-            left_doomed = report.hot_lane == "left" and ui_state.our_left_tower_hp and ui_state.our_left_tower_hp < 400
-            right_doomed = report.hot_lane == "right" and ui_state.our_right_tower_hp and ui_state.our_right_tower_hp < 400
-            
-            # If doomed and heavy push (> 8 elixir push), sacrifice it
-            if (left_doomed or right_doomed) and report.enemy_count >= 3:
-                report.pressure = False
-                
-        if report.pressure: # Only defend if not sacrificed
-            enemy_key = report.top_threat.name.replace("enemy_", "")
+        enemy_key = report.top_threat.name.replace("enemy_", "")
         
         # Try ALL counters in order, not just the best one
         from knowledge.counter_matrix import get_counters
@@ -256,7 +228,6 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                 afford, cost = can_afford(counter, current_elixir)
                 if afford:
                     tx, ty = placement.calculate_drop(counter, report, game_state)
-                    _last_action_time = current_time
                     return ActionCommand(
                         Action.PLAY_CARD, card_to_play=counter,
                         target_x=tx, target_y=ty
@@ -266,7 +237,6 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
         cheapest, cheap_cost = find_cheapest(hand)
         if cheapest and current_elixir >= cheap_cost:
             tx, ty = placement.calculate_drop(cheapest, report, game_state)
-            _last_action_time = current_time
             return ActionCommand(
                 Action.PLAY_CARD, card_to_play=cheapest,
                 target_x=tx, target_y=ty
@@ -290,7 +260,7 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                         
                         # Check left tower
                         if ui_state.enemy_left_tower_hp and ui_state.enemy_left_tower_hp <= ct_damage:
-                            _last_action_time = current_time
+
                             return ActionCommand(
                                 Action.PLAY_CARD, card_to_play=c,
                                 target_x=180, target_y=250
@@ -298,7 +268,7 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                             
                         # Check right tower
                         if ui_state.enemy_right_tower_hp and ui_state.enemy_right_tower_hp <= ct_damage:
-                            _last_action_time = current_time
+
                             return ActionCommand(
                                 Action.PLAY_CARD, card_to_play=c,
                                 target_x=540, target_y=250
@@ -330,7 +300,7 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                 push_x = 180 if opposite == "left" else 540
                 bridge_y = 700
                 
-                _last_action_time = current_time
+
                 return ActionCommand(
                     Action.PLAY_CARD, card_to_play=punish_card,
                     target_x=push_x, target_y=bridge_y
@@ -368,7 +338,7 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                     value, targets = evaluate_spell_value(card, best_cluster)
                     if value >= spell_cost:
                         cx, cy = int(best_cx), int(best_cy)
-                        _last_action_time = current_time
+
                         return ActionCommand(
                             Action.PLAY_CARD, card_to_play=card,
                             target_x=cx, target_y=cy
@@ -387,7 +357,7 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                 if c in SWARMS and c != reserved_card:
                     afford, _ = can_afford(c, current_elixir)
                     if afford:
-                        _last_action_time = current_time
+
                         tx, ty = placement.calculate_drop(c, report, game_state)
                         return ActionCommand(
                             Action.PLAY_CARD, card_to_play=c,
@@ -413,7 +383,7 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                 push_x = 180 if opposite == "left" else 540
                 back_y = 1100  # Behind king tower
                 
-                _last_action_time = current_time
+
                 return ActionCommand(
                     Action.PLAY_CARD, card_to_play=tank,
                     target_x=push_x, target_y=back_y
@@ -435,7 +405,7 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                 afford, cost = can_afford(counter, current_elixir)
                 if afford:
                     tx, ty = placement.calculate_drop(counter, report, game_state)
-                    _last_action_time = current_time
+
                     return ActionCommand(
                         Action.PLAY_CARD, card_to_play=counter,
                         target_x=tx, target_y=ty
@@ -460,7 +430,7 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                 if c in {"log", "zap", "snowball", "arrows"} and c != reserved_card:
                     afford, _ = can_afford(c, current_elixir)
                     if afford:
-                        _last_action_time = current_time
+
                         tx = int(allied_win_con.x)
                         ty = max(250, int(allied_win_con.y - 150))
                         return ActionCommand(
@@ -480,7 +450,7 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                 if afford:
                     tx = int(allied_tank.x)
                     ty = int(allied_tank.y + 120)
-                    _last_action_time = current_time
+
                     return ActionCommand(
                         Action.PLAY_CARD, card_to_play=c,
                         target_x=tx, target_y=ty
@@ -497,7 +467,7 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                 afford, _ = can_afford(c, current_elixir)
                 if afford:
                     push_x = random.choice([180, 540])
-                    _last_action_time = current_time
+
                     return ActionCommand(
                         Action.PLAY_CARD, card_to_play=c,
                         target_x=push_x, target_y=1100
@@ -515,7 +485,7 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                     
         if cheapest_available and current_elixir >= cheap_cost:
             tx, ty = placement.calculate_drop(cheapest_available, report, game_state)
-            _last_action_time = current_time
+
             return ActionCommand(
                 Action.PLAY_CARD, card_to_play=cheapest_available,
                 target_x=tx, target_y=ty
@@ -531,7 +501,7 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
                 afford, cost = can_afford(c, current_elixir)
                 if afford:
                     tx, ty = placement.calculate_drop(c, report, game_state)
-                    _last_action_time = current_time
+
                     return ActionCommand(
                         Action.PLAY_CARD, card_to_play=c,
                         target_x=tx, target_y=ty
