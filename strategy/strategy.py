@@ -3,21 +3,19 @@ TITAN Strategy Engine — The Brain.
 Routes decisions to game-mode-specific strategy modules.
 """
 
-import inspect
-import random
-import time
-
 from strategy.actions import Action, ActionCommand
 from strategy.threat_assessment import ThreatAssessment
 from strategy.elixir_tracker import ElixirTracker
 from memory.enemy_tracker import EnemyTracker
 from actions.placement import PlacementEngine
 from configs.game_config import GAME_MODE
-from experiments.rl.learning.trainer import Trainer
+from learning.trainer import Trainer
 
 from strategy.modes import standard, sudden_death, rl
 from strategy.modes import grandmaster
 from core.analytics import get_engine, DecisionLogger
+import time
+import inspect
 
 # Mode registry — maps config strings to mode modules
 MODE_REGISTRY = {
@@ -26,13 +24,6 @@ MODE_REGISTRY = {
     "rl": rl,
     "grandmaster": grandmaster,
 }
-
-
-def _cache_mode_sig(mode):
-    """Cache the mode's decide() signature, or None if missing."""
-    if hasattr(mode, 'decide'):
-        return inspect.signature(mode.decide)
-    return None
 
 
 class Strategy:
@@ -48,15 +39,13 @@ class Strategy:
 
         # Load the active mode
         self._mode = MODE_REGISTRY.get(GAME_MODE, standard)
-        self._mode_sig = _cache_mode_sig(self._mode)
-        
-        # Human-like delay queue state
-        self._queued_action = None
-        self._queued_time = 0
         
         # Initialize Analytics Logger
         self.session_id = int(time.time())
         self.logger = DecisionLogger(get_engine(), self.session_id)
+        
+        # Cache mode signature to avoid calling inspect.signature every frame
+        self._mode_accepts_game_time = 'game_time' in inspect.signature(self._mode.decide).parameters
 
     @property
     def is_rl_mode(self):
@@ -66,8 +55,6 @@ class Strategy:
         """Reset all stateful subsystems for a new match."""
         self.elixir = ElixirTracker()
         self.memory.clear()
-        self._queued_action = None
-        self._queued_time = 0
         if hasattr(self._mode, 'reset'):
             self._mode.reset()
 
@@ -85,18 +72,14 @@ class Strategy:
         self.memory.update(game_state, game_time)
 
         # Delegate to active mode
-        if self._mode_sig is not None:
-            if 'game_time' in self._mode_sig.parameters:
-                result = self._mode.decide(
-                    game_state, self.threat, self.elixir, self.memory, self.placement, game_time=game_time, ui_state=ui_state
-                )
-            else:
-                result = self._mode.decide(
-                    game_state, self.threat, self.elixir, self.memory, self.placement
-                )
+        if self._mode_accepts_game_time:
+            result = self._mode.decide(
+                game_state, self.threat, self.elixir, self.memory, self.placement, game_time=game_time, ui_state=ui_state
+            )
         else:
-            # Mode has no decide() — default to WAIT
-            return ActionCommand(Action.WAIT), "Mode has no decide()"
+            result = self._mode.decide(
+                game_state, self.threat, self.elixir, self.memory, self.placement
+            )
         
         # Handle different return signatures (Standard mode vs others)
         if len(result) == 3:
@@ -106,10 +89,11 @@ class Strategy:
             all_scores = []
 
         # Intercept action for human-like delay (Anti-Bot)
+        import random
         current_time = time.time()
         
         # Check if we have a queued action
-        is_queued = self._queued_action is not None
+        is_queued = hasattr(self, '_queued_action') and self._queued_action is not None
         
         # If strategy wants to WAIT, cancel any non-emergency queued action
         if action_cmd.action == Action.WAIT:
@@ -117,7 +101,7 @@ class Strategy:
                 self._queued_action = None
             
             # If we are STILL queued (emergency), check if it's time
-            if self._queued_action is not None:
+            if hasattr(self, '_queued_action') and self._queued_action is not None:
                 if current_time >= self._queued_time:
                     action_cmd = self._queued_action
                     self._queued_action = None
@@ -168,7 +152,7 @@ class Strategy:
         """Switch strategy mode at runtime."""
         if mode_name in MODE_REGISTRY:
             self._mode = MODE_REGISTRY[mode_name]
-            self._mode_sig = _cache_mode_sig(self._mode)
+            self._mode_accepts_game_time = 'game_time' in inspect.signature(self._mode.decide).parameters
             print(f"[Strategy] Switched to {mode_name} mode")
         else:
             print(f"[Strategy] Unknown mode: {mode_name}")
