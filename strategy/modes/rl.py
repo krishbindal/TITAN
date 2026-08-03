@@ -1,7 +1,7 @@
 import time
 import random
 from strategy.actions import Action, ActionCommand
-from learning.reinforcement import QLearningAgent
+from experiments.rl.learning.reinforcement import QLearningAgent
 
 # Global state for RL
 _actions = ["WAIT", "DEFEND_LEFT", "DEFEND_RIGHT", "ATTACK_LEFT", "ATTACK_RIGHT"]

@@ -47,14 +47,16 @@ class CollectionReader:
         """
         # Crop top right corner (approx bounds for 720x1280)
         crop = frame[20:80, 450:650]
-        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-        _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
-        
-        text = pytesseract.image_to_string(thresh, config=self.tess_config).strip()
-        try:
-            return int(text)
-        except ValueError:
-            return 0
+        if crop.size > 0:
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
+            
+            text = pytesseract.image_to_string(thresh, config=self.tess_config).strip()
+            try:
+                return int(text)
+            except ValueError:
+                return 0
+        return 0
             
     def read_upgrade_cost(self, frame):
         """
@@ -62,14 +64,16 @@ class CollectionReader:
         """
         # Crop the center popup button area
         crop = frame[800:900, 200:520]
-        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-        _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
-        
-        text = pytesseract.image_to_string(thresh, config=self.tess_config).strip()
-        try:
-            return int(text)
-        except ValueError:
-            return 999999 # Return impossibly high cost if OCR fails
+        if crop.size > 0:
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
+            
+            text = pytesseract.image_to_string(thresh, config=self.tess_config).strip()
+            try:
+                return int(text)
+            except ValueError:
+                return 999999 # Return impossibly high cost if OCR fails
+        return 999999
 
     def read_card_popup_name(self, frame, tap_x, tap_y):
         """
@@ -83,25 +87,27 @@ class CollectionReader:
         
         crop = frame[y_start:y_end, x_start:x_end]
         
-        # Convert to grayscale
-        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-        
-        # Upscale the image by 2x for better OCR accuracy on small text
-        gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-        
-        # Apply thresholding for white text
-        _, thresh = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY)
-        
-        # Whitelist letters and spaces
-        config = '--psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz '
-        
-        try:
-            text = pytesseract.image_to_string(thresh, config=config, timeout=2).strip().lower()
-        except RuntimeError:
-            text = ""
-        
-        # Replace spaces with underscores to match our database keys (e.g. "mini_pekka")
-        return text.replace(" ", "_")
+        if crop.size > 0:
+            # Convert to grayscale
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            
+            # Upscale the image by 2x for better OCR accuracy on small text
+            gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+            
+            # Apply thresholding for white text
+            _, thresh = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY)
+            
+            # Whitelist letters and spaces
+            config = '--psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz '
+            
+            try:
+                text = pytesseract.image_to_string(thresh, config=config, timeout=2).strip().lower()
+            except RuntimeError:
+                text = ""
+            
+            # Replace spaces with underscores to match our database keys (e.g. "mini_pekka")
+            return text.replace(" ", "_")
+        return ""
 
     def is_card_locked(self, frame, card_x, card_y):
         """
@@ -181,9 +187,12 @@ class CollectionReader:
         if hp_match:
             stats["hp"] = int(hp_match.group(1))
         
-        speed_match = re.search(r'Hit\s*Speed\s*([\d.]+)', text, re.IGNORECASE)
+        speed_match = re.search(r'Hit\s*Speed\s*([\d]+[.,]?[\d]*)', text, re.IGNORECASE)
         if speed_match:
-            stats["hit_speed"] = float(speed_match.group(1))
+            try:
+                stats["hit_speed"] = float(speed_match.group(1).replace(',', '.'))
+            except ValueError:
+                pass
 
         range_match = re.search(r'Range\s*([\d.]+)', text, re.IGNORECASE)
         if range_match:

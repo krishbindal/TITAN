@@ -28,7 +28,7 @@ class StateVectorizer:
         
         # 1. Global Scalars (Normalized to 0.0 - 1.0)
         player_elixir = elixir_tracker.player_elixir / 10.0
-        enemy_elixir = memory.enemy_elixir / 10.0 if memory else 0.5
+        enemy_elixir = elixir_tracker.opponent_elixir / 10.0 if elixir_tracker else 0.5
         
         # Normalize game time (0 to 180 seconds typically, maxed at 300 for overtime)
         time_norm = min(game_time / 180.0, 1.0)

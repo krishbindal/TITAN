@@ -1,5 +1,6 @@
 from enum import Enum
 from dataclasses import dataclass
+from typing import Optional
 
 
 class Action(Enum):
@@ -14,9 +15,9 @@ class Action(Enum):
 @dataclass
 class ActionCommand:
     action: Action
-    card_to_play: str = None
-    target_x: int = None
-    target_y: int = None
+    card_to_play: Optional[str] = None
+    target_x: Optional[int] = None
+    target_y: Optional[int] = None
 
     @property
     def name(self):

@@ -107,7 +107,10 @@ def evaluate_spell_value(spell_name, troops_in_range):
         troop_card = _card_db.get(troop_key)
         if troop_card and troop_card.combat.hp <= spell_damage * 1.1:
             # This spell would kill this troop
-            total_value += troop_card.cost
+            unit_value = troop_card.cost
+            if hasattr(troop_card, 'count') and troop_card.count > 1:
+                unit_value = troop_card.cost / troop_card.count
+            total_value += unit_value
             targets += 1
 
     return total_value, targets
@@ -215,6 +218,12 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
     elixir_advantage = elixir.get_elixir_advantage()
     
     # ═══════════════════════════════════════════════════════
+    doomed_lane = None
+    if ui_state and hasattr(ui_state, 'our_left_tower_hp') and hasattr(ui_state, 'our_right_tower_hp'):
+        if ui_state.our_left_tower_hp is not None and ui_state.our_left_tower_hp < 400:
+            doomed_lane = "left"
+        elif ui_state.our_right_tower_hp is not None and ui_state.our_right_tower_hp < 400:
+            doomed_lane = "right"
     # PHASE 5: ENEMY CYCLE PREDICTION (PREDICTIVE DEFENSE)
     # Check if the enemy has a win condition ready in their hand.
     # If so, reserve our best counter so we don't waste it on lesser threats.
@@ -232,8 +241,8 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
     if report.pressure and report.top_threat:
         # SACRIFICE PROTOCOL: If tower is doomed, ignore and save elixir for opposite lane push
         if ui_state and hasattr(ui_state, 'our_left_tower_hp') and hasattr(ui_state, 'our_right_tower_hp'):
-            left_doomed = report.hot_lane == "left" and ui_state.our_left_tower_hp and ui_state.our_left_tower_hp < 400
-            right_doomed = report.hot_lane == "right" and ui_state.our_right_tower_hp and ui_state.our_right_tower_hp < 400
+            left_doomed = report.hot_lane == "left" and ui_state.our_left_tower_hp is not None and ui_state.our_left_tower_hp < 400
+            right_doomed = report.hot_lane == "right" and ui_state.our_right_tower_hp is not None and ui_state.our_right_tower_hp < 400
             
             # If doomed and heavy push (> 8 elixir push), sacrifice it
             if (left_doomed or right_doomed) and report.enemy_count >= 3:
@@ -242,35 +251,35 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
         if report.pressure: # Only defend if not sacrificed
             enemy_key = report.top_threat.name.replace("enemy_", "")
         
-        # Try ALL counters in order, not just the best one
-        from knowledge.counter_matrix import get_counters
-        for counter in get_counters(enemy_key):
-            if counter not in hand:
-                continue
+            # Try ALL counters in order, not just the best one
+            from knowledge.counter_matrix import get_counters
+            for counter in get_counters(enemy_key):
+                if counter not in hand:
+                    continue
+                
+                # Evaluate the trade — don't use PEKKA (7) to kill Skeletons (1)
+                trade_value = evaluate_trade(counter, enemy_key)
+                
+                # Accept even slightly negative trades when under pressure
+                if trade_value >= -2:
+                    afford, cost = can_afford(counter, current_elixir)
+                    if afford:
+                        tx, ty = placement.calculate_drop(counter, report, game_state)
+                        _last_action_time = current_time
+                        return ActionCommand(
+                            Action.PLAY_CARD, card_to_play=counter,
+                            target_x=tx, target_y=ty
+                        ), f"🛡️ EMERGENCY: {counter} vs {enemy_key} (trade: {trade_value:+.0f})"
             
-            # Evaluate the trade — don't use PEKKA (7) to kill Skeletons (1)
-            trade_value = evaluate_trade(counter, enemy_key)
-            
-            # Accept even slightly negative trades when under pressure
-            if trade_value >= -2:
-                afford, cost = can_afford(counter, current_elixir)
-                if afford:
-                    tx, ty = placement.calculate_drop(counter, report, game_state)
-                    _last_action_time = current_time
-                    return ActionCommand(
-                        Action.PLAY_CARD, card_to_play=counter,
-                        target_x=tx, target_y=ty
-                    ), f"🛡️ EMERGENCY: {counter} vs {enemy_key} (trade: {trade_value:+.0f})"
-        
-        # Fallback: if no good counter, use cheapest card to distract
-        cheapest, cheap_cost = find_cheapest(hand)
-        if cheapest and current_elixir >= cheap_cost:
-            tx, ty = placement.calculate_drop(cheapest, report, game_state)
-            _last_action_time = current_time
-            return ActionCommand(
-                Action.PLAY_CARD, card_to_play=cheapest,
-                target_x=tx, target_y=ty
-            ), f"🛡️ PANIC: Distract with {cheapest}"
+            # Fallback: if no good counter, use cheapest card to distract
+            cheapest, cheap_cost = find_cheapest(hand)
+            if cheapest and current_elixir >= cheap_cost:
+                tx, ty = placement.calculate_drop(cheapest, report, game_state)
+                _last_action_time = current_time
+                return ActionCommand(
+                    Action.PLAY_CARD, card_to_play=cheapest,
+                    target_x=tx, target_y=ty
+                ), f"🛡️ PANIC: Distract with {cheapest}"
     
     # ═══════════════════════════════════════════════════════
     # PRIORITY 2: SPELL FINISH
@@ -425,21 +434,22 @@ def decide(game_state, threat, elixir, memory, placement, game_time=0.0, ui_stat
     # Place counter early for maximum value.
     # ═══════════════════════════════════════════════════════
     if report.enemy_count > 0 and report.top_threat and current_elixir >= 5:
-        enemy_key = report.top_threat.name.replace("enemy_", "")
-        counter = best_counter(enemy_key, hand)
-        
-        if counter:
-            trade_value = evaluate_trade(counter, enemy_key)
-            # Only pre-defend if trade is positive or neutral
-            if trade_value >= 0:
-                afford, cost = can_afford(counter, current_elixir)
-                if afford:
-                    tx, ty = placement.calculate_drop(counter, report, game_state)
-                    _last_action_time = current_time
-                    return ActionCommand(
-                        Action.PLAY_CARD, card_to_play=counter,
-                        target_x=tx, target_y=ty
-                    ), f"🔰 Pre-defend: {counter} vs {enemy_key} (trade: {trade_value:+.0f})"
+        if report.hot_lane != doomed_lane:
+            enemy_key = report.top_threat.name.replace("enemy_", "")
+            counter = best_counter(enemy_key, hand)
+            
+            if counter:
+                trade_value = evaluate_trade(counter, enemy_key)
+                # Only pre-defend if trade is positive or neutral
+                if trade_value >= 0:
+                    afford, cost = can_afford(counter, current_elixir)
+                    if afford:
+                        tx, ty = placement.calculate_drop(counter, report, game_state)
+                        _last_action_time = current_time
+                        return ActionCommand(
+                            Action.PLAY_CARD, card_to_play=counter,
+                            target_x=tx, target_y=ty
+                        ), f"🔰 Pre-defend: {counter} vs {enemy_key} (trade: {trade_value:+.0f})"
     
     # ═══════════════════════════════════════════════════════
     # PRIORITY 6.2: PREDICTIVE SPELL

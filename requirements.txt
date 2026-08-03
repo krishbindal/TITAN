@@ -1,21 +1,14 @@
-# Core
-opencv-python>=4.8.0
-numpy>=1.24.0,<2.0.0
-mss>=9.0.0
-Pillow>=10.0.0
+opencv-python==4.8.0.76
+numpy==1.24.3
+mss==9.0.1
+Pillow==10.0.0
+torch==2.0.1
+torchvision==0.15.2
+ultralytics==8.2.0
+pytesseract==0.3.10
+waitress==3.0.0
+Flask==3.0.0
 
-# AI/ML
-torch>=2.0.0
-torchvision>=0.15.0
-ultralytics>=8.0.0
-
-# UI/OCR
-pytesseract>=0.3.10
-
-# Web Dashboard
-waitress>=3.0.0
-Flask>=3.0.0
-
-# Development/Linting
-flake8>=7.0.0
-black>=24.0.0
+# === LLM ===
+openai==1.68.2
+python-dotenv==1.1.0

@@ -17,6 +17,12 @@ class UIReader:
         self.cached_right_hp = None
         self.tesseract_available = True
 
+    def reset(self):
+        """Reset cached state for a new match."""
+        self.last_hp_check = 0.0
+        self.cached_left_hp = None
+        self.cached_right_hp = None
+
     def read(self, frame):
         """
         Extracts the player's elixir from the bottom of the screen using fast HSV pixel counting.
@@ -71,22 +77,27 @@ class UIReader:
                 left_crop = frame[190:230, 110:250]
                 right_crop = frame[190:230, 470:610]
                 
-                # Preprocess for OCR (grayscale, threshold)
-                left_gray = cv2.cvtColor(left_crop, cv2.COLOR_BGR2GRAY)
-                right_gray = cv2.cvtColor(right_crop, cv2.COLOR_BGR2GRAY)
-                _, left_thresh = cv2.threshold(left_gray, 200, 255, cv2.THRESH_BINARY)
-                _, right_thresh = cv2.threshold(right_gray, 200, 255, cv2.THRESH_BINARY)
-                
-                # OCR config for digits only
-                config = '--psm 7 -c tessedit_char_whitelist=0123456789'
-                
-                l_text = pytesseract.image_to_string(left_thresh, config=config).strip()
-                if l_text and l_text.isdigit():
-                    self.cached_left_hp = int(l_text)
+                if left_crop.size > 0 and right_crop.size > 0:
+                    # Preprocess for OCR (grayscale, threshold)
+                    left_gray = cv2.cvtColor(left_crop, cv2.COLOR_BGR2GRAY)
+                    right_gray = cv2.cvtColor(right_crop, cv2.COLOR_BGR2GRAY)
+                    _, left_thresh = cv2.threshold(left_gray, 200, 255, cv2.THRESH_BINARY)
+                    _, right_thresh = cv2.threshold(right_gray, 200, 255, cv2.THRESH_BINARY)
                     
-                r_text = pytesseract.image_to_string(right_thresh, config=config).strip()
-                if r_text and r_text.isdigit():
-                    self.cached_right_hp = int(r_text)
+                    # OCR config for digits only
+                    config = '--psm 7 -c tessedit_char_whitelist=0123456789'
+                    
+                    l_text = pytesseract.image_to_string(left_thresh, config=config).strip()
+                    if l_text and l_text.isdigit():
+                        self.cached_left_hp = int(l_text)
+                    else:
+                        self.cached_left_hp = 0
+                        
+                    r_text = pytesseract.image_to_string(right_thresh, config=config).strip()
+                    if r_text and r_text.isdigit():
+                        self.cached_right_hp = int(r_text)
+                    else:
+                        self.cached_right_hp = 0
             except pytesseract.TesseractNotFoundError:
                 print("[UIReader] Tesseract OCR not found. Disabling Tower HP checks.")
                 self.tesseract_available = False

@@ -13,7 +13,7 @@ from engine.async_engine import AsyncEngine
 from vision.screen_classifier import ScreenState
 
 
-def test_video(video_path):
+def run_video_test(video_path):
     print("Loading TITAN Async Engine with S-Class model...")
     engine = AsyncEngine(MODEL_PATH, process_every_n=4)
     engine.start()
@@ -214,6 +214,6 @@ if __name__ == "__main__":
         videos = [f for f in os.listdir(video_dir) if f.endswith(".mp4")]
         if videos:
             print(f"Found {len(videos)} videos. Testing the first one...")
-            test_video(os.path.join(video_dir, videos[0]))
+            run_video_test(os.path.join(video_dir, videos[0]))
         else:
             print("No .mp4 videos found in", video_dir)

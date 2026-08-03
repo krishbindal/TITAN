@@ -57,12 +57,6 @@ class ThreatAssessment:
             card_key = troop.name.replace("enemy_", "")
             card = self.card_db.get(card_key)
 
-            # Fallbacks if card unknown
-            dps = card.combat.dps if card else 100
-            hp = card.combat.hp if card else 1000
-            speed = card.combat.speed_numeric if card else 60
-            target = card.combat.target_type if card else "ground"
-
             if card is None:
                 # Unknown card — estimate a moderate DPS
                 troop_dps = 100.0

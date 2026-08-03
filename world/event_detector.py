@@ -7,6 +7,10 @@ class EventDetector:
 
         self.previous_tracks = {}
 
+    def reset(self):
+        """Reset tracked state for a new match."""
+        self.previous_tracks = {}
+
     def update(self, tracks, time):
 
         events = []

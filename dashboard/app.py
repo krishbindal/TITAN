@@ -1,18 +1,15 @@
 import threading
 import time
 import cv2
-from flask import Flask, Response, render_template, jsonify
+import os
+from functools import wraps
+from flask import Flask, Response, render_template, jsonify, request
 
 app = Flask(__name__)
 
 # Global state to hold callbacks
 _get_frame_cb = None
 _get_telemetry_cb = None
-
-
-import os
-from functools import wraps
-from flask import request, Response
 
 # Simple Basic Auth
 DASHBOARD_USER = os.environ.get("TITAN_DASHBOARD_USER")

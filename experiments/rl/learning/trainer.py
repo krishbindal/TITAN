@@ -1,5 +1,7 @@
-from learning.reinforcement import QLearningAgent
-from learning.replay_buffer import ReplayBuffer
+import threading
+
+from experiments.rl.learning.reinforcement import QLearningAgent
+from experiments.rl.learning.replay_buffer import ReplayBuffer
 from vision.screen_classifier import ScreenState
 
 
@@ -8,6 +10,13 @@ class Trainer:
         self.agent = QLearningAgent(actions=actions)
         self.buffer = ReplayBuffer()
         
+        self.last_state_key = None
+        self.last_action = None
+        self.episode_done = False
+        self._save_lock = threading.Lock()
+
+    def reset(self):
+        """Reset trainer state for a new match."""
         self.last_state_key = None
         self.last_action = None
         self.episode_done = False
@@ -32,7 +41,7 @@ class Trainer:
         # Save to buffer and update Q-table if we have a previous state
         if self.last_state_key is not None and self.last_action is not None:
             self.buffer.push(self.last_state_key, self.last_action, reward, current_state_key, done)
-            self.agent.update(self.last_state_key, self.last_action, reward, current_state_key)
+            self.agent.update(self.last_state_key, self.last_action, reward, current_state_key, done=done)
 
         self.last_state_key = current_state_key
         self.last_action = action
@@ -40,7 +49,9 @@ class Trainer:
         # Save model on episode end
         if done:
             self.episode_done = True
-            self.agent.save()
+            self.agent.decay_epsilon()
+            with self._save_lock:
+                self.agent.save()
             # Reset state tracking for next game
             self.last_state_key = None
             self.last_action = None
@@ -49,8 +60,8 @@ class Trainer:
         reward = 0.0
         
         # Intermediate reward: Elixir advantage
-        elixir_adv = elixir_tracker.get_elixir_advantage()
-        reward += elixir_adv * 0.1  # Small positive reward for holding elixir advantage
+        # elixir_adv = elixir_tracker.get_elixir_advantage()
+        # reward += elixir_adv * 0.1  # (Removed to prevent continuous reward hacking)
         
         # Terminal rewards
         if screen_state == ScreenState.VICTORY:

@@ -41,7 +41,7 @@ class Visualizer:
             )
 
         # Draw Target Crosshair if an action is taking place
-        if action and action.target_x and action.target_y:
+        if action and action.target_x is not None and action.target_y is not None:
             tx, ty = int(action.target_x), int(action.target_y)
             cv2.circle(image, (tx, ty), 20, (0, 255, 255), 2)
             cv2.line(image, (tx - 30, ty), (tx + 30, ty), (0, 255, 255), 1)

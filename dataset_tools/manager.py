@@ -62,8 +62,6 @@ class DatasetManager:
     def split(self, source_dir, train_ratio=0.80, val_ratio=0.15):
         """Split a flat image+label directory into train/val/test."""
 
-        test_ratio = 1.0 - train_ratio - val_ratio
-
         img_dir = os.path.join(source_dir, "images")
         label_dir = os.path.join(source_dir, "labels")
 

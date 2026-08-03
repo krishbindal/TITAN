@@ -13,6 +13,7 @@ import argparse
 from datetime import datetime
 
 from core.adb_controller import ADBController
+from capture.adb_capture import AdbCapture
 from engine.pipeline import Pipeline
 from configs.settings import MODEL_PATH
 from vision.visualizer import Visualizer
@@ -33,8 +34,9 @@ def main():
     
     log_file = os.path.join(log_dir, f"session_{session_id}.jsonl")
 
-    print("Initializing ADB Controller...")
-    adb = ADBController("127.0.0.1:5555")
+    print("Initializing ADB Controller & Vision Models...")
+    capture = AdbCapture("127.0.0.1:5555")
+    adb = ADBController("127.0.0.1:5555", capture_backend=capture)
 
     print("Loading AI Models (Vision Only)...")
     # We only need the pipeline for Vision + State parsing. No actions will be sent.

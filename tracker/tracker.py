@@ -24,35 +24,34 @@ class Tracker:
         new_tracks = []
         start_next_id = self.next_id
 
-        # Match detections
-        for detection in detections:
+        import numpy as np
+        from scipy.optimize import linear_sum_assignment
 
-            best_track = None
-            best_distance = float("inf")
-            detection_norm = CardDatabase.normalize(detection.name)
-
-            for track in self.tracks:
-
-                if CardDatabase.normalize(track.name) != detection_norm:
-                    continue
-
-                distance = track.distance_to(detection)
-
-                if (
-                    distance < self.max_distance
-                    and distance < best_distance
-                    and track.id not in matched_tracks
-                ):
-                    best_distance = distance
-                    best_track = track
-
-            if best_track is not None:
-
-                best_track.update(detection, frame_number)
-                matched_tracks.add(best_track.id)
-
-            else:
-
+        # Match detections using Hungarian algorithm
+        if len(self.tracks) > 0 and len(detections) > 0:
+            cost_matrix = np.full((len(self.tracks), len(detections)), float('inf'))
+            for i, track in enumerate(self.tracks):
+                for j, detection in enumerate(detections):
+                    if CardDatabase.normalize(track.name) == CardDatabase.normalize(detection.name):
+                        distance = track.distance_to(detection)
+                        if distance < self.max_distance:
+                            cost_matrix[i, j] = distance
+            
+            row_ind, col_ind = linear_sum_assignment(cost_matrix)
+            
+            matched_detections = set()
+            for i, j in zip(row_ind, col_ind):
+                if cost_matrix[i, j] != float('inf'):
+                    self.tracks[i].update(detections[j], frame_number)
+                    matched_tracks.add(self.tracks[i].id)
+                    matched_detections.add(j)
+                    
+            for j, detection in enumerate(detections):
+                if j not in matched_detections:
+                    new_tracks.append(Track(self.next_id, detection, frame_number))
+                    self.next_id += 1
+        else:
+            for detection in detections:
                 new_tracks.append(Track(self.next_id, detection, frame_number))
                 self.next_id += 1
 

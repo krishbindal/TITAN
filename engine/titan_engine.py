@@ -26,12 +26,22 @@ class TitanEngine:
 
         self.visualizer = Visualizer()
 
-    def process_frame(self, frame, frame_number, time):
+    def reset(self):
+        """Reset all stateful components for a new match."""
+        self.tracker = Tracker()
+        self.action_detector = ActionDetector()
+        self.event_detector.reset()
+        self.screen_classifier.reset()
+
+    def process_frame(self, frame, frame_number, current_time):
 
         # Step 1: Classify screen state
         screen_state = self.screen_classifier.classify(frame)
 
         if screen_state != ScreenState.GAMEPLAY:
+            # Clear stale tracks to prevent phantom spawn events when
+            # gameplay resumes after a non-gameplay gap.
+            self.event_detector.previous_tracks = {}
             return frame, [], [], screen_state
 
         # Step 2: Detect objects
@@ -52,11 +62,9 @@ class TitanEngine:
             self.action_detector.detect(track)
 
         # Step 7: Detect events from confirmed tracks
-        events = self.event_detector.update(confirmed, time)
+        events = self.event_detector.update(confirmed, current_time)
 
-        # Step 8: Visualize all detections (for debug)
-        output = self.visualizer.draw(frame, detections)
+        # Step 8: Visualize confirmed tracks (not raw detections)
+        output = self.visualizer.draw(frame, confirmed)
 
         return output, confirmed, events, screen_state
-
-

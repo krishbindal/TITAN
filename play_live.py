@@ -9,13 +9,11 @@ Features an explicit State Machine and dual operating modes (Play / Manage).
 import time
 import traceback
 import argparse
-import copy
 import logging
-import cv2
-import numpy as np
 from enum import Enum, auto
 
 from core.adb_controller import ADBController
+from capture.adb_capture import AdbCapture
 from engine.async_engine import AsyncEngine
 from configs.settings import MODEL_PATH
 from vision.visualizer import Visualizer
@@ -103,7 +101,7 @@ def update_telemetry(frame, screen_state, action, game_state, pipeline, suggesti
     return _latest_frame
 
 
-def run_play_mode(adb, pipeline, visualizer, navigator, deck_builder):
+def run_play_mode(adb, capture_backend, pipeline, visualizer, navigator, deck_builder):
     """Executes the autonomous playing loop."""
     logger.info("Entering PLAY MODE.")
     state = AppState.FIRST_BOOT
@@ -119,7 +117,7 @@ def run_play_mode(adb, pipeline, visualizer, navigator, deck_builder):
     while True:
         try:
             start_time = time.time()
-            frame = adb.capture_screen()
+            frame = capture_backend.get_frame()
             if frame is None:
                 consecutive_failures += 1
                 if consecutive_failures >= 30:
@@ -238,7 +236,6 @@ def run_play_mode(adb, pipeline, visualizer, navigator, deck_builder):
                     
             # Diagnostics
             if frame_count % 30 == 0:
-                hand = game_state.hand if game_state else []
                 state_name = screen_state.name if screen_state else "N/A"
                 elx = pipeline.pipeline.strategy.elixir.player_elixir if hasattr(pipeline.pipeline.strategy, 'elixir') else '?'
                 logger.debug(f"State: {state.name} | Screen: {state_name} | FPS: {fps:.1f} | Elixir: {elx}")
@@ -254,14 +251,14 @@ def run_play_mode(adb, pipeline, visualizer, navigator, deck_builder):
             time.sleep(2)
 
 
-def run_manage_mode(adb, navigator, collection_reader, deck_builder, build_deck=False):
+def run_manage_mode(adb, capture_backend, navigator, collection_reader, deck_builder, build_deck=False):
     """Executes collection management tasks (one-shot)."""
     logger.info("Entering MANAGEMENT MODE.")
     state = AppState.FIRST_BOOT
     
     # Wait for home screen
     for _ in range(10):
-        frame = adb.capture_screen()
+        frame = capture_backend.get_frame()
         if frame is None:
             time.sleep(1)
             continue
@@ -313,8 +310,11 @@ def main():
     logger.info(f" TITAN S-CLASS: {args.mode.upper()} MODE")
     logger.info("=" * 50)
 
+    logger.info("Initializing Capture Backend...")
+    capture_backend = AdbCapture("127.0.0.1:5555")
+
     logger.info("Initializing ADB Controller...")
-    adb = ADBController("127.0.0.1:5555")
+    adb = ADBController("127.0.0.1:5555", capture_backend=capture_backend)
 
     # In Management mode, we don't strictly need the async ML pipeline running.
     logger.info("Initializing Management Modules...")
@@ -323,7 +323,7 @@ def main():
     deck_builder = DeckBuilder(adb, navigator, collection_reader)
 
     if args.mode == "manage":
-        run_manage_mode(adb, navigator, collection_reader, deck_builder, args.build_deck)
+        run_manage_mode(adb, capture_backend, navigator, collection_reader, deck_builder, args.build_deck)
         return
 
     # Play mode requires the ML pipeline
@@ -335,7 +335,7 @@ def main():
     logger.info("System Ready. Monitoring live feed...")
     
     try:
-        run_play_mode(adb, pipeline, visualizer, navigator, deck_builder)
+        run_play_mode(adb, capture_backend, pipeline, visualizer, navigator, deck_builder)
     finally:
         if hasattr(pipeline, "stop"):
             pipeline.stop()

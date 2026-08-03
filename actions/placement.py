@@ -143,11 +143,12 @@ class PlacementEngine:
             centroid_y = int(push_y / push_count)
         else:
             # Fallback if no enemies on hot lane
-            centroid_x, centroid_y = (180 if threat_report.hot_lane != "right" else 540), 750
+            centroid_x, centroid_y = int(target.x), int(target.y)
         
         # --- Kinematic Leading ---
         # Lead the target based on its speed
         lead_y = 30
+        lead_x = 0
         enemy_card = self.card_db.get(target.name.replace("enemy_", ""))
         if enemy_card:
             speed = enemy_card.combat.speed_class if enemy_card.combat.speed_class else "medium"
@@ -162,7 +163,7 @@ class PlacementEngine:
         heavy_melee_threats = {
             "pekka",
             "mega_knight",
-            "giant_skeleton",
+            "skeleton_giant",
             "mini_pekka",
             "prince",
         }
@@ -193,16 +194,16 @@ class PlacementEngine:
         if card_to_play in self.spells:
             # Spells should hit the cluster centroid, not just one troop
             if push_count > 1:
-                return centroid_x, centroid_y
-            return int(target.x), int(target.y)
+                return centroid_x + lead_x, centroid_y + lead_y
+            return int(target.x) + lead_x, int(target.y) + lead_y
 
         if card_to_play in self.buildings:
             # Buildings go in the center to pull (kite) enemies
             pull_x = 360
             if target.x < 360:
-                pull_x -= 30  # Pull slightly to the left
+                pull_x += 50  # Pull across center from left
             else:
-                pull_x += 30  # Pull slightly to the right
+                pull_x -= 50  # Pull across center from right
             return int(pull_x), int(self.center_pull_y)
 
         if card_to_play in self.ranged:
@@ -224,8 +225,17 @@ class PlacementEngine:
             splash_units = {"wizard", "valkyrie", "executioner", "bomber", 
                             "dark_prince", "baby_dragon", "bowler", "firecracker", "sparky"}
             
+            has_splash = False
+            for troop in game_state.troops:
+                if troop.team == "enemy" and troop.y > self.bridge_y - 100:
+                    if (threat_report.hot_lane == "left" and troop.x < self.center_x) or \
+                       (threat_report.hot_lane == "right" and troop.x > self.center_x):
+                        if troop.name.replace("enemy_", "") in splash_units:
+                            has_splash = True
+                            break
+
             enemy_name = target.name.replace("enemy_", "")
-            if enemy_name in splash_units:
+            if enemy_name in splash_units or has_splash:
                 # Drop exactly on top to surround
                 return int(target.x), int(target.y)
                 

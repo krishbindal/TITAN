@@ -33,13 +33,49 @@ class Pipeline:
         self.frame_count = 0
         self.match_start_time = None
 
+        # Latest filtered detections, exposed for telemetry/visualization
+        self.last_detections = []
+        
+        self._last_game_state = None
+        self._last_rl_action = "WAIT"
+        self.last_threat_report = None
+
     def reset(self):
         """Reset internal state for a new match."""
         self.tracker = Tracker()
         self.action_detector = ActionDetector()
+        self.screen_classifier.reset()
+        self.ui_reader.reset()
         self.frame_count = 0
         self.match_start_time = None
+        self.last_detections = []
         self.strategy.reset_match()
+        
+        self._last_game_state = None
+        self._last_rl_action = "WAIT"
+        self.last_threat_report = None
+        
+        if self.strategy.is_rl_mode and hasattr(self.strategy, 'trainer') and self.strategy.trainer:
+            self.strategy.trainer.last_state_key = None
+            self.strategy.trainer.last_action = None
+            self.strategy.trainer.episode_done = False
+
+    def _extract_rl_action(self, action, suggestion):
+        if not suggestion:
+            return "WAIT"
+        
+        macros = [
+            "ATTACK_LEFT", "ATTACK_RIGHT", 
+            "DEFEND_LEFT", "DEFEND_RIGHT", 
+            "PUNISH_LEFT", "PUNISH_RIGHT", 
+            "SUPPORT_LEFT", "SUPPORT_RIGHT", 
+            "CYCLE", "WAIT"
+        ]
+        for macro in macros:
+            if macro in suggestion:
+                return macro
+                
+        return "WAIT"
 
     def process_frame(self, frame):
 
@@ -47,17 +83,21 @@ class Pipeline:
         screen_state = self.screen_classifier.classify(frame)
 
         if screen_state != ScreenState.GAMEPLAY:
-            self.frame_count += 1
-            
+            # Any confirmed non-gameplay screen ends the current match context.
+            # Clearing the clock here also protects against abandoned matches:
+            # without this, game_time would leak into the next battle and
+            # trigger double-elixir logic immediately.
+            self.match_start_time = None
+            self.last_detections = []
+
             # Send terminal states to the RL Trainer for Win/Loss rewards
-            if screen_state in [ScreenState.VICTORY, ScreenState.DEFEAT]:
-                self.match_start_time = None
+            if screen_state in (ScreenState.VICTORY, ScreenState.DEFEAT):
                 if self.strategy.is_rl_mode:
                     self.strategy.trainer.step(
-                        state=None,
+                        state=self._last_game_state,
                         threat_report=ThreatReport(),
                         elixir_tracker=self.strategy.elixir,
-                        action=None,
+                        action=self._last_rl_action,
                         screen_state=screen_state
                     )
                 
@@ -72,6 +112,7 @@ class Pipeline:
 
         # Step 3: Filter by screen region
         detections = self.region_filter.filter(detections)
+        self.last_detections = detections
 
         # Step 4: Track (with frame number)
         self.tracker.update(detections, self.frame_count)
@@ -95,11 +136,18 @@ class Pipeline:
 
         # Step 9: Train RL Agent (ONLY in RL mode)
         if self.strategy.is_rl_mode:
+            rl_action = self._extract_rl_action(action, suggestion)
+            self._last_rl_action = rl_action
+            self._last_game_state = game_state
+            
+            report = self.strategy.get_threat_report(game_state)
+            self.last_threat_report = report
+            
             self.strategy.trainer.step(
                 state=game_state,
-                threat_report=self.strategy.get_threat_report(game_state),
+                threat_report=report,
                 elixir_tracker=self.strategy.elixir,
-                action=action.action.name if action else "WAIT",
+                action=rl_action,
                 screen_state=screen_state
             )
 

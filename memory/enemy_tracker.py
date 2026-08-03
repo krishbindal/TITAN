@@ -25,10 +25,20 @@ class EnemyTracker:
         # Track when we last billed a card type to prevent multi-counting swarms
         self._last_card_play_times = {}
 
+        self.champion_alive = False
+
     def update(self, game_state, game_time=0.0):
         """Update memory based on the current battlefield."""
         
+        self.champion_alive = False
+        
         for troop in game_state.troops:
+            if troop.team == "enemy":
+                card_key = self.card_db.normalize(troop.name)
+                card_info = self.card_db.get(card_key)
+                if card_info and card_info.metadata.rarity.lower() == "champion":
+                    self.champion_alive = True
+                    
             if troop.team != "enemy":
                 continue
 
@@ -38,6 +48,9 @@ class EnemyTracker:
             # New enemy card detected!
             self._counted_track_ids.add(troop.track_id)
             card_key = self.card_db.normalize(troop.name)
+            
+            if card_key == 'mirror':
+                continue
             
             # Swarm cooldown: if we just logged this card type recently, ignore the clone
             last_played = self._last_card_play_times.get(card_key, -10.0)
@@ -62,14 +75,15 @@ class EnemyTracker:
             return False  # We haven't seen it yet
 
         # Get the last 4 cards played
-        last_4 = (
-            self.play_history[-4:] if len(self.play_history) >= 4 else self.play_history
+        cycle_length = 3 if getattr(self, 'champion_alive', False) else 4
+        last_n = (
+            self.play_history[-cycle_length:] if len(self.play_history) >= cycle_length else self.play_history
         )
 
-        if card_key in last_4:
+        if card_key in last_n:
             return False  # They played it recently, it's not back in their hand yet
 
-        return True  # It's been >= 4 cards, so it's in their hand
+        return True  # It's been >= cycle_length cards, so it's in their hand
 
     def has_win_condition_in_cycle(self):
         """

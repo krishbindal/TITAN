@@ -2,7 +2,7 @@ import random
 import json
 import os
 import ast
-from learning.vector_state import StateVectorizer
+from experiments.rl.learning.vector_state import StateVectorizer
 
 class QLearningAgent:
     def __init__(self, actions, alpha=0.1, gamma=0.9, epsilon=0.1, model_path="models/q_table.json"):
@@ -82,14 +82,21 @@ class QLearningAgent:
         
         return action, f"Exploiting known strategy (Q: {max_q:.2f})"
 
-    def update(self, state_key, action, reward, next_state_key):
+    def decay_epsilon(self):
+        self.epsilon = max(0.01, self.epsilon * 0.995)
+
+    def update(self, state_key, action, reward, next_state_key, done=False, next_valid_actions=None):
         old_q = self.get_q_value(state_key, action)
         
         # Max Q for next state
-        next_max = max([self.get_q_value(next_state_key, a) for a in self.actions])
+        actions_to_consider = next_valid_actions if next_valid_actions else self.actions
+        if not actions_to_consider:
+            next_max = 0.0
+        else:
+            next_max = max([self.get_q_value(next_state_key, a) for a in actions_to_consider])
         
         # Q-learning formula
-        new_q = (1 - self.alpha) * old_q + self.alpha * (reward + self.gamma * next_max)
+        new_q = (1 - self.alpha) * old_q + self.alpha * (reward + self.gamma * next_max * (1 - int(done)))
         self.q_table[(state_key, action)] = new_q
 
     def save(self):

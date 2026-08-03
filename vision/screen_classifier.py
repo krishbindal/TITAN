@@ -31,43 +31,31 @@ class ScreenClassifier:
         self._pending_state = None
         self._pending_count = 0
 
+    def reset(self):
+        """Reset classifier state for a new match."""
+        self._current_state = ScreenState.UNKNOWN
+        self._pending_state = None
+        self._pending_count = 0
+
     def classify(self, frame):
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         raw_state = self._raw_classify(hsv)
 
-        # If we are currently in GAMEPLAY and the raw classifier
-        # says something else, require it to persist before switching.
-        if self._current_state == ScreenState.GAMEPLAY:
-            if raw_state == ScreenState.GAMEPLAY:
-                # Still gameplay — reset any pending transition
-                self._pending_state = None
-                self._pending_count = 0
-            else:
-                # Non-gameplay detected — start or continue counting
-                if raw_state == self._pending_state:
-                    self._pending_count += 1
-                else:
-                    self._pending_state = raw_state
-                    self._pending_count = 1
-
-                # Only switch if we've seen it for enough consecutive frames
-                if self._pending_count >= self.CONFIRM_FRAMES:
-                    self._current_state = raw_state
-                    self._pending_state = None
-                    self._pending_count = 0
-                else:
-                    # Not confirmed yet — stay in GAMEPLAY
-                    return ScreenState.GAMEPLAY
+        if raw_state == self._current_state:
+            self._pending_state = None
+            self._pending_count = 0
         else:
-            # We are NOT in gameplay. Switch back to gameplay immediately
-            # the moment raw says gameplay (no delay needed to resume playing).
-            if raw_state == ScreenState.GAMEPLAY:
-                self._current_state = ScreenState.GAMEPLAY
+            if raw_state == self._pending_state:
+                self._pending_count += 1
+            else:
+                self._pending_state = raw_state
+                self._pending_count = 1
+
+            if self._pending_count >= self.CONFIRM_FRAMES:
+                self._current_state = raw_state
                 self._pending_state = None
                 self._pending_count = 0
-            else:
-                self._current_state = raw_state
 
         return self._current_state
 

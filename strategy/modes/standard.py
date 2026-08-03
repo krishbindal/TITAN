@@ -7,12 +7,13 @@ Elixir tracking, and Counter matrices to preempt and outsmart the opponent.
 import json
 import os
 import random
+from typing import Dict, List
 from strategy.actions import Action, ActionCommand
 from knowledge.counter_matrix import get_counters
 from configs.settings import DECK_CONFIG_PATH
 
 # Load deck config once at module level
-_deck_config = {"win_conditions": [], "tanks": [], "spells": []}
+_deck_config: Dict[str, List[str]] = {"win_conditions": [], "tanks": [], "spells": []}
 if os.path.exists(DECK_CONFIG_PATH):
     with open(DECK_CONFIG_PATH, "r") as f:
         _deck_config = json.load(f)

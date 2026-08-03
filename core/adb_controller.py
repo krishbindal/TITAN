@@ -10,8 +10,9 @@ class ADBController:
     Allows TITAN to capture the screen and inject touch events.
     """
 
-    def __init__(self, device_id="127.0.0.1:5555"):
+    def __init__(self, device_id="127.0.0.1:5555", capture_backend=None):
         self.device_id = device_id
+        self.capture_backend = capture_backend
         # Ensure ADB is connected
         self._connect()
 
@@ -22,7 +23,7 @@ class ADBController:
             )
             print(f"[ADB] Connected to {self.device_id}")
             self._init_scaling()
-        except Exception as e:
+        except Exception:
             print(
                 f"[ADB] Warning: Could not connect to {self.device_id}. Is ADB in PATH?"
             )
@@ -84,33 +85,15 @@ class ADBController:
 
     def capture_screen(self):
         """
-        Captures the screen using ADB.
-        Returns a BGR numpy array (OpenCV format) or None if failed.
+        Legacy wrapper for backward compatibility.
+        Delegates to capture_backend.
         """
-        try:
-            # Fast raw screen capture with timeout to prevent hanging
-            result = subprocess.run(
-                ["adb", "-s", self.device_id, "exec-out", "screencap", "-p"],
-                capture_output=True,
-                timeout=2.0
-            )
-            image_bytes = result.stdout
-
-            if not image_bytes:
-                print(f"[ADB] capture_screen returned no data. stderr: {result.stderr}")
-                return None
-
-            # Decode bytes to OpenCV format
-            image_array = np.frombuffer(image_bytes, dtype=np.uint8)
-            frame = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-
-            if frame is not None:
-                # Resize to standard TITAN resolution if necessary
-                return cv2.resize(frame, (720, 1280))
+        if self.capture_backend:
+            return self.capture_backend.get_frame()
+        else:
+            print("[ADB] Error: No capture backend provided.")
             return None
-        except Exception as e:
-            print(f"[ADB] Capture Error: {e}")
-            return None
+
 
     def tap(self, x, y):
         """Send a tap event to specific coordinates, scaled to native resolution."""
@@ -189,22 +172,25 @@ class ADBController:
                 self.tap(start_x, hand_y)
                 
                 # Check if card was actually selected
-                frame = self.capture_screen()
-                if frame is not None:
-                    # Look at the space just ABOVE the unselected card.
-                    # Unselected card top is Y=1020. Selected card top is Y=980.
-                    # This ROI (Y=960:1000) is background when unselected, but filled with card art when selected.
-                    roi = frame[960:1000, start_x-20:start_x+20]
-                    gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-                    variance = np.var(gray)
-                    
-                    if variance > 200:
-                        print(f"[ADB] Card {card_index} selection verified (variance: {variance:.1f}).")
-                        break
+                if self.capture_backend:
+                    frame = self.capture_backend.get_frame()
+                    if frame is not None:
+                        # Look at the space just ABOVE the unselected card.
+                        # Unselected card top is Y=1020. Selected card top is Y=980.
+                        # This ROI (Y=960:1000) is background when unselected, but filled with card art when selected.
+                        roi = frame[960:1000, start_x-20:start_x+20]
+                        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                        variance = np.var(gray)
+                        
+                        if variance > 200:
+                            print(f"[ADB] Card {card_index} selection verified (variance: {variance:.1f}).")
+                            break
+                        else:
+                            print(f"[ADB] Card {card_index} selection missed (variance: {variance:.1f}). Retrying tap {attempt+1}...")
                     else:
-                        print(f"[ADB] Card {card_index} selection missed (variance: {variance:.1f}). Retrying tap {attempt+1}...")
+                        # Frame capture failed, proceed blindly
+                        break
                 else:
-                    # Frame capture failed, proceed blindly
                     break
 
             # Deploy

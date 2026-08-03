@@ -39,6 +39,7 @@ class ElixirTracker:
         
         # Track when we last billed a card type to prevent multi-counting swarms
         self._last_card_play_times = {}
+        self.last_played_cost = 0.0
 
         # Game clock tracking for elixir regen
         self._last_update_time = 0.0
@@ -74,8 +75,13 @@ class ElixirTracker:
             
             # Trust OCR if it drops (indicates a play we missed) or if it's within bounds
             if ocr_val < self.player_elixir - 0.5:
-                # Big drop means card played
-                self.player_elixir = ocr_val
+                drop = self.player_elixir - ocr_val
+                if hasattr(self, 'last_played_cost') and abs(drop - self.last_played_cost) <= 1.0:
+                    self.player_elixir = ocr_val
+                elif drop <= 4.0:
+                    self.player_elixir = ocr_val
+                else:
+                    self.player_elixir = time_estimate
             elif abs(ocr_val - time_estimate) <= 2.0:
                 # Plausible read, trust it and snap
                 self.player_elixir = ocr_val
@@ -107,13 +113,17 @@ class ElixirTracker:
             
             # Swarm cooldown: if we just billed this card type recently, ignore the clone
             card_key = self.card_db.normalize(troop.name)
-            last_played = self._last_card_play_times.get(card_key, -10.0)
-            if game_time - last_played < 2.0:
+            card = self.card_db.get(card_key)
+            
+            is_spawner = card and (getattr(card, 'is_spawner', False) or getattr(card, 'spawns', None) is not None or card_key == 'graveyard')
+            cooldown = 15.0 if is_spawner else 2.0
+            
+            last_played = self._last_card_play_times.get(card_key, -100.0)
+            if game_time - last_played < cooldown:
                 continue
                 
             self._last_card_play_times[card_key] = game_time
 
-            card = self.card_db.get(card_key)
             if card and card.cost:
                 self.opponent_elixir = max(0.0, self.opponent_elixir - card.cost)
 
@@ -135,6 +145,7 @@ class ElixirTracker:
             card = self.card_db.get(card_name)
             cost = card.cost if card and card.cost else 3.0
         self.player_elixir = max(0.0, self.player_elixir - cost)
+        self.last_played_cost = cost
 
     def __str__(self):
         advantage = self.get_elixir_advantage()
