@@ -15,6 +15,7 @@ from strategy.modes import standard, sudden_death, rl
 from strategy.modes import grandmaster
 from core.analytics import get_engine, DecisionLogger
 import time
+import inspect
 
 # Mode registry — maps config strings to mode modules
 MODE_REGISTRY = {
@@ -42,6 +43,9 @@ class Strategy:
         # Initialize Analytics Logger
         self.session_id = int(time.time())
         self.logger = DecisionLogger(get_engine(), self.session_id)
+        
+        # Cache mode signature to avoid calling inspect.signature every frame
+        self._mode_accepts_game_time = 'game_time' in inspect.signature(self._mode.decide).parameters
 
     @property
     def is_rl_mode(self):
@@ -68,17 +72,14 @@ class Strategy:
         self.memory.update(game_state, game_time)
 
         # Delegate to active mode
-        if hasattr(self._mode, 'decide'):
-            import inspect
-            sig = inspect.signature(self._mode.decide)
-            if 'game_time' in sig.parameters:
-                result = self._mode.decide(
-                    game_state, self.threat, self.elixir, self.memory, self.placement, game_time=game_time, ui_state=ui_state
-                )
-            else:
-                result = self._mode.decide(
-                    game_state, self.threat, self.elixir, self.memory, self.placement
-                )
+        if self._mode_accepts_game_time:
+            result = self._mode.decide(
+                game_state, self.threat, self.elixir, self.memory, self.placement, game_time=game_time, ui_state=ui_state
+            )
+        else:
+            result = self._mode.decide(
+                game_state, self.threat, self.elixir, self.memory, self.placement
+            )
         
         # Handle different return signatures (Standard mode vs others)
         if len(result) == 3:
@@ -151,6 +152,7 @@ class Strategy:
         """Switch strategy mode at runtime."""
         if mode_name in MODE_REGISTRY:
             self._mode = MODE_REGISTRY[mode_name]
+            self._mode_accepts_game_time = 'game_time' in inspect.signature(self._mode.decide).parameters
             print(f"[Strategy] Switched to {mode_name} mode")
         else:
             print(f"[Strategy] Unknown mode: {mode_name}")
